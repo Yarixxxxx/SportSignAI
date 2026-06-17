@@ -25,13 +25,14 @@ public sealed class ProjectSetupService : IProjectSetupService
             throw new ArgumentException("Project name is required.", nameof(request));
         }
 
-        if (string.IsNullOrWhiteSpace(request.SourceVideoPath))
+        var hasSourceVideo = !string.IsNullOrWhiteSpace(request.SourceVideoPath);
+        if (!request.IsBroadcastMode && !hasSourceVideo)
         {
             throw new ArgumentException("Source video path is required.", nameof(request));
         }
 
-        var sourceVideoPath = Path.GetFullPath(request.SourceVideoPath);
-        if (!File.Exists(sourceVideoPath))
+        var sourceVideoPath = hasSourceVideo ? Path.GetFullPath(request.SourceVideoPath) : string.Empty;
+        if (hasSourceVideo && !File.Exists(sourceVideoPath))
         {
             throw new FileNotFoundException("Source video file was not found.", sourceVideoPath);
         }
@@ -48,12 +49,6 @@ public sealed class ProjectSetupService : IProjectSetupService
         Directory.CreateDirectory(mediaFolderPath);
         Directory.CreateDirectory(exportsFolderPath);
 
-        var originalFileName = Path.GetFileName(sourceVideoPath);
-        var storedFileName = GetAvailableFileName(mediaFolderPath, originalFileName);
-        var storedVideoPath = Path.Combine(mediaFolderPath, storedFileName);
-
-        File.Copy(sourceVideoPath, storedVideoPath, overwrite: false);
-
         var project = new Project(
             projectId,
             request.ProjectName.Trim(),
@@ -62,24 +57,35 @@ public sealed class ProjectSetupService : IProjectSetupService
             Normalize(request.Description),
             Normalize(request.HomeTeamName),
             Normalize(request.AwayTeamName),
-            projectFolderPath);
-
-        var projectVideo = new ProjectVideo(
-            Guid.NewGuid(),
-            projectId,
-            Normalize(request.VideoTitle) ?? Path.GetFileNameWithoutExtension(originalFileName),
-            originalFileName,
-            storedVideoPath,
-            now);
+            projectFolderPath,
+            request.IsBroadcastMode);
 
         await _repository.CreateProjectAsync(project, cancellationToken);
-        await _repository.UpsertProjectVideoAsync(projectVideo, cancellationToken);
+        ProjectVideo? projectVideo = null;
+        if (hasSourceVideo)
+        {
+            var originalFileName = Path.GetFileName(sourceVideoPath);
+            var storedFileName = GetAvailableFileName(mediaFolderPath, originalFileName);
+            var storedVideoPath = Path.Combine(mediaFolderPath, storedFileName);
+
+            File.Copy(sourceVideoPath, storedVideoPath, overwrite: false);
+
+            projectVideo = new ProjectVideo(
+                Guid.NewGuid(),
+                projectId,
+                Normalize(request.VideoTitle) ?? Path.GetFileNameWithoutExtension(originalFileName),
+                originalFileName,
+                storedVideoPath,
+                now);
+
+            await _repository.UpsertProjectVideoAsync(projectVideo, cancellationToken);
+        }
 
         return new CreateProjectResultDto(
             project.Id,
             project.ProjectFolderPath,
-            projectVideo.StoredFilePath,
-            projectVideo.Title);
+            projectVideo?.StoredFilePath ?? string.Empty,
+            projectVideo?.Title ?? string.Empty);
     }
 
     private static string? Normalize(string? value)

@@ -61,6 +61,7 @@ public sealed class AnnotationRenderService : IAnnotationRenderService
             return null;
         }
 
+        filters.Insert(0, "setpts=PTS-STARTPTS");
         await File.WriteAllTextAsync(scriptPath, string.Join(',', filters), Utf8WithoutBom, cancellationToken);
         return scriptPath;
     }
@@ -167,5 +168,5 @@ public sealed class AnnotationRenderService : IAnnotationRenderService
             .Replace("%", "\\%", StringComparison.Ordinal);
     }
 
-    private static string ToInvariant(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+    private static string ToInvariant(double value) => value.ToString("0.######", CultureInfo.InvariantCulture);
 }

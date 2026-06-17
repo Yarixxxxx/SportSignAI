@@ -9,6 +9,8 @@ namespace VideoAnalysis.Infrastructure.Services;
 
 public sealed class FfmpegClipComposerService : IClipComposerService
 {
+    private const int ExportVideoCrf = 16;
+    private const string ExportVideoPreset = "medium";
     private static readonly bool IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
     private readonly string _ffmpegPath;
@@ -20,6 +22,12 @@ public sealed class FfmpegClipComposerService : IClipComposerService
 
     public IReadOnlyList<ClipSegmentDto> BuildSegments(IEnumerable<TagEvent> events, ClipRecipe recipe, long maxFrame)
     {
+        if (maxFrame <= 0)
+        {
+            return [];
+        }
+
+        var lastFrame = Math.Max(0, maxFrame - 1);
         return events
             .Where((tagEvent) =>
                 !tagEvent.IsOpen &&
@@ -29,8 +37,10 @@ public sealed class FfmpegClipComposerService : IClipComposerService
                 (string.IsNullOrWhiteSpace(recipe.QueryText) || (!string.IsNullOrWhiteSpace(tagEvent.Notes) && tagEvent.Notes.Contains(recipe.QueryText, StringComparison.OrdinalIgnoreCase))))
             .Select((tagEvent) =>
             {
-                var start = Math.Max(0, tagEvent.StartFrame - recipe.PreRollFrames);
-                var end = Math.Min(maxFrame, tagEvent.EndFrame + recipe.PostRollFrames);
+                var requestedStart = tagEvent.StartFrame - recipe.PreRollFrames;
+                var requestedEnd = tagEvent.EndFrame + recipe.PostRollFrames;
+                var start = Math.Clamp(requestedStart, 0, lastFrame);
+                var end = Math.Clamp(requestedEnd, start, lastFrame);
                 return new ClipSegmentDto(tagEvent.Id, start, end, recipe.Name, tagEvent.Player);
             })
             .OrderBy((segment) => segment.StartFrame)
@@ -67,11 +77,16 @@ public sealed class FfmpegClipComposerService : IClipComposerService
 
                 var args = string.Join(' ',
                     "-y",
-                    $"-ss {ToInvariant(startSeconds)}",
                     $"-i {Quote(sourceVideoPath)}",
+                    $"-ss {ToInvariant(startSeconds)}",
                     $"-t {ToInvariant(durationSeconds)}",
-                    "-c:v libx264 -preset veryfast -crf 20",
-                    "-c:a aac -b:a 160k",
+                    "-map 0:v:0",
+                    "-map 0:a?",
+                    $"-c:v libx264 -preset {ExportVideoPreset} -crf {ExportVideoCrf}",
+                    "-pix_fmt yuv420p",
+                    "-c:a aac -b:a 192k",
+                    "-movflags +faststart",
+                    "-avoid_negative_ts make_zero",
                     Quote(partPath));
 
                 await RunFfmpegAsync(args, cancellationToken);
@@ -86,7 +101,7 @@ public sealed class FfmpegClipComposerService : IClipComposerService
             if (!string.IsNullOrWhiteSpace(overlayFilterPath))
             {
                 await RunFfmpegAsync(
-                    $"-y -i {Quote(mergedPath)} -filter_script:v {Quote(overlayFilterPath!)} -c:v libx264 -preset veryfast -crf 20 -c:a copy {Quote(outputPath)}",
+                    $"-y -i {Quote(mergedPath)} -filter_script:v {Quote(overlayFilterPath!)} -c:v libx264 -preset {ExportVideoPreset} -crf {ExportVideoCrf} -pix_fmt yuv420p -c:a copy -movflags +faststart {Quote(outputPath)}",
                     cancellationToken);
             }
 
@@ -124,7 +139,7 @@ public sealed class FfmpegClipComposerService : IClipComposerService
         }
     }
 
-    private static string ToInvariant(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+    private static string ToInvariant(double value) => value.ToString("0.######", CultureInfo.InvariantCulture);
 
     private static string Quote(string value) => $"\"{value.Replace("\"", "\\\"")}\"";
 

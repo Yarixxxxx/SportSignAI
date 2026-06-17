@@ -1,9 +1,11 @@
 using Avalonia;
-using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using VideoAnalysis.App.Configuration;
+using VideoAnalysis.App.Media;
+using VideoAnalysis.App.Services;
 using VideoAnalysis.App.ViewModels.Shell;
 using VideoAnalysis.App.Views;
 using VideoAnalysis.Core.Abstractions;
@@ -25,18 +27,42 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        AppLogService.InstallUiExceptionHandler();
         _serviceProvider = ConfigureServices();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow
-            {
-                DataContext = _serviceProvider.GetRequiredService<MainWindowViewModel>(),
-                WindowState = WindowState.Maximized
-            };
+            var splashWindow = new SplashWindow();
+            desktop.MainWindow = splashWindow;
+            splashWindow.Show();
+            _ = ShowMainWindowAsync(desktop, splashWindow);
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private async Task ShowMainWindowAsync(
+        IClassicDesktopStyleApplicationLifetime desktop,
+        SplashWindow splashWindow)
+    {
+        await Task.Delay(2_200);
+
+        if (_serviceProvider is null)
+        {
+            splashWindow.Close();
+            return;
+        }
+
+        var mainWindow = new MainWindow
+        {
+            DataContext = _serviceProvider.GetRequiredService<MainWindowViewModel>(),
+            WindowState = WindowState.Maximized
+        };
+
+        desktop.MainWindow = mainWindow;
+        mainWindow.Show();
+        await splashWindow.CompleteAsync();
+        splashWindow.Close();
     }
 
     private static ServiceProvider ConfigureServices()
@@ -63,7 +89,8 @@ public partial class App : Application
         services.AddSingleton<ITagService, TagService>();
         services.AddSingleton<IEventCaptureService, EventCaptureService>();
         services.AddSingleton<IPlaylistService, PlaylistService>();
-        services.AddSingleton<IMediaPlaybackService, LibVlcMediaPlaybackService>();
+        services.AddSingleton<IMediaPlaybackService, MpvMediaPlaybackService>();
+        services.AddSingleton<IVideoProxyService>(_ => new FfmpegVideoProxyService(settings.FfmpegPath));
         services.AddSingleton<IClipComposerService>(_ => new FfmpegClipComposerService(settings.FfmpegPath));
         services.AddSingleton<IAnnotationRenderService, AnnotationRenderService>();
         services.AddSingleton<IExportService, ExportService>();

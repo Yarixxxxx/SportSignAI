@@ -8,4 +8,5 @@ public sealed record Project(
     string? Description = null,
     string? HomeTeamName = null,
     string? AwayTeamName = null,
-    string ProjectFolderPath = "");
+    string ProjectFolderPath = "",
+    bool IsBroadcastMode = false);

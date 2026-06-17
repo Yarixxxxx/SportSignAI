@@ -10,6 +10,8 @@ public sealed partial class TagEventItemViewModel : ObservableObject
     public required string TeamSide { get; init; }
     public required long StartFrame { get; init; }
     public required long EndFrame { get; init; }
+    public required string StartTimeText { get; init; }
+    public required string EndTimeText { get; init; }
     public required string Player { get; init; }
     public required string Period { get; init; }
     public required string Notes { get; init; }

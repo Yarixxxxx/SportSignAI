@@ -6,4 +6,5 @@ public sealed record ProjectVideo(
     string Title,
     string OriginalFileName,
     string StoredFilePath,
-    DateTimeOffset ImportedAtUtc);
+    DateTimeOffset ImportedAtUtc,
+    string? ProxyFilePath = null);

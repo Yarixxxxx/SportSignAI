@@ -42,6 +42,33 @@ public sealed class SqliteProjectRepositoryTests : IDisposable
         Assert.Equal(project.HomeTeamName, loaded.HomeTeamName);
         Assert.Equal(project.AwayTeamName, loaded.AwayTeamName);
         Assert.Equal(project.ProjectFolderPath, loaded.ProjectFolderPath);
+        Assert.False(loaded.IsBroadcastMode);
+    }
+
+    [Fact]
+    public async Task CreateAndLoadBroadcastProject_Works()
+    {
+        var repository = new SqliteProjectRepository(_storageRootPath);
+        await repository.InitializeAsync(CancellationToken.None);
+
+        var project = new Project(
+            Guid.NewGuid(),
+            "Live Match",
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow,
+            "Live tagging",
+            "Home",
+            "Away",
+            Path.Combine(_storageRootPath, "live-match"),
+            IsBroadcastMode: true);
+
+        await repository.CreateProjectAsync(project, CancellationToken.None);
+
+        var loaded = await repository.GetProjectAsync(project.Id, CancellationToken.None);
+
+        Assert.NotNull(loaded);
+        Assert.True(loaded!.IsBroadcastMode);
+        Assert.Equal(project.Name, loaded.Name);
     }
 
     [Fact]
@@ -61,7 +88,8 @@ public sealed class SqliteProjectRepositoryTests : IDisposable
             "Game 1",
             "game1.mp4",
             Path.Combine(_storageRootPath, "match", "game1.mp4"),
-            DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow,
+            Path.Combine(_storageRootPath, "match", "proxy", "game1.proxy.mp4"));
 
         await repository.UpsertProjectVideoAsync(video, CancellationToken.None);
 
@@ -69,6 +97,7 @@ public sealed class SqliteProjectRepositoryTests : IDisposable
         Assert.NotNull(loaded);
         Assert.Equal(video.Title, loaded!.Title);
         Assert.Equal(video.StoredFilePath, loaded.StoredFilePath);
+        Assert.Equal(video.ProxyFilePath, loaded.ProxyFilePath);
     }
 
     [Fact]
@@ -114,6 +143,29 @@ public sealed class SqliteProjectRepositoryTests : IDisposable
                 Directory.Delete(sourceFolder, recursive: true);
             }
         }
+    }
+
+    [Fact]
+    public async Task CreateBroadcastProject_AllowsMissingVideo()
+    {
+        var repository = new SqliteProjectRepository(_storageRootPath);
+        var service = new ProjectSetupService(repository, _storageRootPath);
+
+        var result = await service.CreateProjectWithVideoAsync(
+            new CreateProjectRequestDto(
+                "Live Playoffs",
+                string.Empty,
+                Description: "Live mode",
+                IsBroadcastMode: true),
+            CancellationToken.None);
+
+        var project = await repository.GetProjectAsync(result.ProjectId, CancellationToken.None);
+        var video = await repository.GetProjectVideoAsync(result.ProjectId, CancellationToken.None);
+
+        Assert.NotNull(project);
+        Assert.True(project!.IsBroadcastMode);
+        Assert.Null(video);
+        Assert.Equal(string.Empty, result.StoredVideoPath);
     }
 
     [Fact]

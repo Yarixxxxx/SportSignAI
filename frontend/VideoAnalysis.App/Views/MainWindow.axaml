@@ -4,17 +4,17 @@
         xmlns:items="using:VideoAnalysis.App.ViewModels.Items"
         xmlns:converters="using:VideoAnalysis.App.Converters"
         xmlns:models="using:VideoAnalysis.Core.Models"
-        xmlns:vlc="clr-namespace:LibVLCSharp.Avalonia;assembly=LibVLCSharp.Avalonia"
+        xmlns:mpv="clr-namespace:HanumanInstitute.LibMpv.Avalonia;assembly=HanumanInstitute.LibMpv.Avalonia"
         x:Class="VideoAnalysis.App.Views.MainWindow"
         x:Name="RootWindow"
         x:DataType="vm:MainWindowViewModel"
-        Width="1600"
-        Height="960"
-        MinWidth="1180"
-        MinHeight="760"
-        Title="Video Analytics - Hockey MVP"
+        Width="960"
+        Height="600"
+        MinWidth="620"
+        MinHeight="480"
+        Title="VideoAnalytics - Плеер"
         Icon="/Assets/app-icon.ico"
-        Background="#0B1220"
+        Background="#0D0D0E"
         Foreground="#E5EDF9"
         ClipToBounds="True">
 
@@ -24,8 +24,10 @@
 
   <Window.Styles>
     <Style Selector="Border.top-menu-bar">
-      <Setter Property="Background" Value="#1D1D20"/>
-      <Setter Property="Padding" Value="8,4"/>
+      <Setter Property="Background" Value="#242426"/>
+      <Setter Property="BorderBrush" Value="#3A3A3D"/>
+      <Setter Property="BorderThickness" Value="0,0,0,1"/>
+      <Setter Property="Padding" Value="4,0"/>
     </Style>
 
     <Style Selector="Button.top-menu-item">
@@ -33,11 +35,11 @@
       <Setter Property="BorderBrush" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="Foreground" Value="#F7FAFF"/>
-      <Setter Property="Padding" Value="14,6,14,10"/>
+      <Setter Property="Padding" Value="14,8"/>
       <Setter Property="FontSize" Value="14"/>
       <Setter Property="VerticalContentAlignment" Value="Center"/>
       <Setter Property="HorizontalContentAlignment" Value="Center"/>
-      <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="CornerRadius" Value="4"/>
     </Style>
 
     <Style Selector="ToggleButton.top-menu-item">
@@ -45,11 +47,11 @@
       <Setter Property="BorderBrush" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="Foreground" Value="#F7FAFF"/>
-      <Setter Property="Padding" Value="14,6,14,10"/>
+      <Setter Property="Padding" Value="14,8"/>
       <Setter Property="FontSize" Value="14"/>
       <Setter Property="VerticalContentAlignment" Value="Center"/>
       <Setter Property="HorizontalContentAlignment" Value="Center"/>
-      <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="CornerRadius" Value="4"/>
     </Style>
 
     <Style Selector="Button.top-menu-item /template/ ContentPresenter">
@@ -93,23 +95,23 @@
     </Style>
 
     <Style Selector="Border.file-menu-popup">
-      <Setter Property="Background" Value="#232327"/>
-      <Setter Property="BorderBrush" Value="#3A3A3E"/>
+      <Setter Property="Background" Value="#FF20242C"/>
+      <Setter Property="BorderBrush" Value="#526987"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="CornerRadius" Value="4"/>
       <Setter Property="Padding" Value="6"/>
-      <Setter Property="BoxShadow" Value="0 8 24 0 #66000000"/>
+      <Setter Property="BoxShadow" Value="0 12 30 0 #CC000000"/>
     </Style>
 
     <Style Selector="Button.file-menu-item">
-      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Background" Value="#FF20242C"/>
       <Setter Property="BorderBrush" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="Foreground" Value="#F7FAFF"/>
       <Setter Property="HorizontalContentAlignment" Value="Left"/>
       <Setter Property="Padding" Value="14,10"/>
-      <Setter Property="MinWidth" Value="220"/>
-      <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="MinWidth" Value="260"/>
+      <Setter Property="CornerRadius" Value="4"/>
     </Style>
 
     <Style Selector="Button.file-menu-item /template/ ContentPresenter">
@@ -117,7 +119,7 @@
     </Style>
 
     <Style Selector="Button.file-menu-item:pointerover">
-      <Setter Property="Background" Value="#3A3A3E"/>
+      <Setter Property="Background" Value="#FF303948"/>
     </Style>
 
     <Style Selector="Button.file-menu-item:pointerover /template/ ContentPresenter">
@@ -158,30 +160,49 @@
       <Setter Property="Background" Value="#304563"/>
     </Style>
 
+    <Style Selector="Button.broadcast-record-button">
+      <Setter Property="Background" Value="#1F5EFF"/>
+      <Setter Property="BorderBrush" Value="#4285FF"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Foreground" Value="#F7FAFF"/>
+      <Setter Property="Padding" Value="14,9"/>
+      <Setter Property="CornerRadius" Value="6"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="Button.broadcast-record-button:pointerover">
+      <Setter Property="Background" Value="#2F73FF"/>
+    </Style>
+
+    <Style Selector="Button.broadcast-record-button:pressed">
+      <Setter Property="Background" Value="#174DD6"/>
+    </Style>
+
     <Style Selector="Border.player-control-bar">
       <Setter Property="Background" Value="#1D1D20"/>
-      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="CornerRadius" Value="0"/>
       <Setter Property="Padding" Value="10,6,10,14"/>
-      <Setter Property="BorderBrush" Value="#2A3A55"/>
-      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="BorderBrush" Value="#283244"/>
+      <Setter Property="BorderThickness" Value="0,1,0,0"/>
     </Style>
 
     <Style Selector="Border.player-seek-surface">
-      <Setter Property="Height" Value="28"/>
+      <Setter Property="Height" Value="34"/>
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
 
     <Style Selector="Border.player-seek-track">
-      <Setter Property="Height" Value="4"/>
-      <Setter Property="CornerRadius" Value="2"/>
-      <Setter Property="Background" Value="#31435E"/>
+      <Setter Property="Height" Value="7"/>
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="Background" Value="#53647F"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
 
     <Style Selector="Border.player-seek-progress">
-      <Setter Property="Height" Value="4"/>
-      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="Height" Value="7"/>
+      <Setter Property="CornerRadius" Value="4"/>
       <Setter Property="Background" Value="#2F86FF"/>
       <Setter Property="HorizontalAlignment" Value="Left"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
@@ -197,16 +218,16 @@
     </Style>
 
     <Style Selector="Border.player-volume-track">
-      <Setter Property="Width" Value="4"/>
-      <Setter Property="CornerRadius" Value="2"/>
-      <Setter Property="Background" Value="#31435E"/>
+      <Setter Property="Width" Value="6"/>
+      <Setter Property="CornerRadius" Value="3"/>
+      <Setter Property="Background" Value="#53647F"/>
       <Setter Property="HorizontalAlignment" Value="Center"/>
       <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
 
     <Style Selector="Border.player-volume-progress">
-      <Setter Property="Width" Value="4"/>
-      <Setter Property="CornerRadius" Value="2"/>
+      <Setter Property="Width" Value="6"/>
+      <Setter Property="CornerRadius" Value="3"/>
       <Setter Property="Background" Value="#2F86FF"/>
       <Setter Property="HorizontalAlignment" Value="Center"/>
       <Setter Property="VerticalAlignment" Value="Bottom"/>
@@ -238,16 +259,46 @@
     </Style>
 
     <Style Selector="Border.panel">
-      <Setter Property="Background" Value="#111A2B"/>
-      <Setter Property="BorderBrush" Value="#24324A"/>
+      <Setter Property="Background" Value="#151617"/>
+      <Setter Property="BorderBrush" Value="#283244"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="CornerRadius" Value="10"/>
-      <Setter Property="Padding" Value="18"/>
+      <Setter Property="CornerRadius" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
       <Setter Property="ClipToBounds" Value="True"/>
     </Style>
 
+    <Style Selector="Border.panel-window-header">
+      <Setter Property="Background" Value="#202123"/>
+      <Setter Property="BorderBrush" Value="#344056"/>
+      <Setter Property="BorderThickness" Value="0,0,0,1"/>
+      <Setter Property="Padding" Value="14,8"/>
+    </Style>
+
+    <Style Selector="Button.panel-window-button">
+      <Setter Property="Width" Value="30"/>
+      <Setter Property="Height" Value="26"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Foreground" Value="#DCE6F5"/>
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="Padding" Value="0"/>
+    </Style>
+
+    <Style Selector="Button.panel-window-button:pointerover">
+      <Setter Property="Background" Value="#344056"/>
+    </Style>
+
+    <Style Selector="Button.panel-window-button.close-button:pointerover">
+      <Setter Property="Background" Value="#B4232A"/>
+      <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+
     <Style Selector="TextBlock.section-title">
-      <Setter Property="FontSize" Value="22"/>
+      <Setter Property="FontSize" Value="15"/>
       <Setter Property="FontWeight" Value="SemiBold"/>
       <Setter Property="Foreground" Value="#F7FAFF"/>
     </Style>
@@ -259,8 +310,8 @@
     </Style>
 
     <Style Selector="Border.placeholder-card">
-      <Setter Property="Background" Value="#162238"/>
-      <Setter Property="BorderBrush" Value="#2B3C59"/>
+      <Setter Property="Background" Value="#1B1D21"/>
+      <Setter Property="BorderBrush" Value="#344056"/>
       <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="CornerRadius" Value="8"/>
       <Setter Property="Padding" Value="14"/>
@@ -268,8 +319,8 @@
     </Style>
 
     <Style Selector="Border.stats-header-card">
-      <Setter Property="Background" Value="#1D1D20"/>
-      <Setter Property="BorderBrush" Value="#2B3C59"/>
+      <Setter Property="Background" Value="#151617"/>
+      <Setter Property="BorderBrush" Value="#283244"/>
       <Setter Property="BorderThickness" Value="0,0,0,1"/>
       <Setter Property="Padding" Value="18,16"/>
     </Style>
@@ -285,46 +336,46 @@
     <Style Selector="Border.stats-bar-track">
       <Setter Property="Height" Value="8"/>
       <Setter Property="CornerRadius" Value="4"/>
-      <Setter Property="Background" Value="#24324A"/>
+      <Setter Property="Background" Value="#1E2C42"/>
       <Setter Property="ClipToBounds" Value="True"/>
     </Style>
 
     <Style Selector="ProgressBar.stats-bar-home">
       <Setter Property="Minimum" Value="0"/>
       <Setter Property="Foreground" Value="#FF2A2A"/>
-      <Setter Property="Background" Value="#24324A"/>
+      <Setter Property="Background" Value="#1E2C42"/>
       <Setter Property="Height" Value="8"/>
     </Style>
 
     <Style Selector="ProgressBar.stats-bar-away">
       <Setter Property="Minimum" Value="0"/>
       <Setter Property="Foreground" Value="#2F86FF"/>
-      <Setter Property="Background" Value="#24324A"/>
+      <Setter Property="Background" Value="#1E2C42"/>
       <Setter Property="Height" Value="8"/>
     </Style>
 
     <Style Selector="TextBox.event-type-input">
-      <Setter Property="Background" Value="#162238"/>
-      <Setter Property="BorderBrush" Value="#2B3C59"/>
+      <Setter Property="Background" Value="#121315"/>
+      <Setter Property="BorderBrush" Value="#344056"/>
       <Setter Property="Foreground" Value="#F7FAFF"/>
       <Setter Property="CaretBrush" Value="#F7FAFF"/>
       <Setter Property="SelectionBrush" Value="#2F86FF"/>
     </Style>
 
     <Style Selector="TextBox.event-type-input:pointerover">
-      <Setter Property="Background" Value="#162238"/>
+      <Setter Property="Background" Value="#121315"/>
       <Setter Property="BorderBrush" Value="#3A567C"/>
       <Setter Property="Foreground" Value="#F7FAFF"/>
     </Style>
 
     <Style Selector="TextBox.event-type-input:focus">
-      <Setter Property="Background" Value="#162238"/>
+      <Setter Property="Background" Value="#121315"/>
       <Setter Property="BorderBrush" Value="#2F86FF"/>
       <Setter Property="Foreground" Value="#F7FAFF"/>
     </Style>
 
     <Style Selector="TextBox.event-type-input /template/ Border">
-      <Setter Property="Background" Value="#162238"/>
+      <Setter Property="Background" Value="#121315"/>
     </Style>
 
     <Style Selector="TextBox.event-type-input /template/ ContentControl#PART_Watermark">
@@ -394,7 +445,7 @@
     </Style>
 
     <Style Selector="Button.action-button">
-      <Setter Property="Background" Value="#203867"/>
+      <Setter Property="Background" Value="#1D5DFF"/>
       <Setter Property="BorderBrush" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="Foreground" Value="#F7FAFF"/>
@@ -403,7 +454,7 @@
     </Style>
 
     <Style Selector="Button.action-button:pointerover">
-      <Setter Property="Background" Value="#2A4A86"/>
+      <Setter Property="Background" Value="#2F6DFF"/>
     </Style>
 
     <Style Selector="Button.event-eye-button">
@@ -435,10 +486,10 @@
     </Style>
 
     <Style Selector="Border.panel-tabs">
-      <Setter Property="Background" Value="#171A20"/>
-      <Setter Property="BorderBrush" Value="#2A3242"/>
+      <Setter Property="Background" Value="#151617"/>
+      <Setter Property="BorderBrush" Value="#283244"/>
       <Setter Property="BorderThickness" Value="0,0,0,1"/>
-      <Setter Property="CornerRadius" Value="8,8,0,0"/>
+      <Setter Property="CornerRadius" Value="0"/>
       <Setter Property="Padding" Value="0"/>
     </Style>
 
@@ -461,8 +512,8 @@
     </Style>
 
     <Style Selector="ToggleButton.tab-button:checked">
-      <Setter Property="Background" Value="#243B62"/>
-      <Setter Property="BorderBrush" Value="#E6ECF8"/>
+      <Setter Property="Background" Value="#172D55"/>
+      <Setter Property="BorderBrush" Value="#2F7BFF"/>
       <Setter Property="Foreground" Value="#4FA0FF"/>
     </Style>
 
@@ -576,6 +627,80 @@
       <Setter Property="BorderBrush" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+
+    <Style Selector="Button.layout-choice-button">
+      <Setter Property="Background" Value="#1B1C20"/>
+      <Setter Property="BorderBrush" Value="#3B4658"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="12"/>
+      <Setter Property="Foreground" Value="#DCE6F5"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+    </Style>
+
+    <Style Selector="Button.layout-choice-button:pointerover">
+      <Setter Property="Background" Value="#222A38"/>
+      <Setter Property="BorderBrush" Value="#2F86FF"/>
+    </Style>
+
+    <Style Selector="Border.layout-preview">
+      <Setter Property="Height" Value="54"/>
+      <Setter Property="Background" Value="#101216"/>
+      <Setter Property="BorderBrush" Value="#243FFF"/>
+      <Setter Property="BorderThickness" Value="2"/>
+      <Setter Property="CornerRadius" Value="4"/>
+      <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
+
+    <Style Selector="Border.layout-preview-line">
+      <Setter Property="Background" Value="#243FFF"/>
+    </Style>
+
+    <Style Selector="Border.workspace-empty-slot">
+      <Setter Property="Background" Value="#111317"/>
+      <Setter Property="BorderBrush" Value="#2B3C59"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="18"/>
+    </Style>
+
+    <Style Selector="Button.workspace-entity-button">
+      <Setter Property="Background" Value="#182235"/>
+      <Setter Property="BorderBrush" Value="#304461"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Foreground" Value="#B8C7DD"/>
+      <Setter Property="CornerRadius" Value="8"/>
+      <Setter Property="Padding" Value="12,10"/>
+      <Setter Property="MinWidth" Value="120"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="Button.workspace-entity-button:pointerover">
+      <Setter Property="Background" Value="#1D5DFF"/>
+      <Setter Property="BorderBrush" Value="#2F86FF"/>
+      <Setter Property="Foreground" Value="#FFFFFF"/>
+    </Style>
+
+    <Style Selector="Button.workspace-edge-add-button">
+      <Setter Property="Width" Value="30"/>
+      <Setter Property="Height" Value="30"/>
+      <Setter Property="Background" Value="#1D5DFF"/>
+      <Setter Property="BorderBrush" Value="#6AAEFF"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Foreground" Value="#FFFFFF"/>
+      <Setter Property="CornerRadius" Value="15"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="FontSize" Value="18"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="Button.workspace-edge-add-button:pointerover">
+      <Setter Property="Background" Value="#2F86FF"/>
+      <Setter Property="BorderBrush" Value="#9BC8FF"/>
     </Style>
 
     <Style Selector="Button.dialog-secondary-button">
@@ -991,7 +1116,7 @@
     </Style>
   </Window.Styles>
 
-  <Grid RowDefinitions="Auto,*" ClipToBounds="True">
+  <Grid RowDefinitions="Auto,*" Background="#0D0D0E" ClipToBounds="True">
     <Border x:Name="TopMenuBar" Grid.Row="0" Classes="top-menu-bar">
       <Grid ColumnDefinitions="Auto,*">
         <StackPanel Orientation="Horizontal" Spacing="2">
@@ -1018,7 +1143,22 @@
         </StackPanel>
 
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
-          <Button Classes="top-menu-item" Content="Формат"/>
+          <ToggleButton x:Name="MarkupMenuButton"
+                        Classes="top-menu-item"
+                        Checked="OnMarkupMenuChecked"
+                        Content="Разметка"/>
+          <Popup IsOpen="{Binding IsChecked, ElementName=MarkupMenuButton}"
+                 PlacementTarget="{Binding #MarkupMenuButton}"
+                 Placement="Bottom"
+                 HorizontalOffset="0"
+                 VerticalOffset="4">
+            <Border Classes="file-menu-popup">
+              <StackPanel Spacing="2">
+                <Button Classes="file-menu-item" Content="Режим разметки"/>
+              </StackPanel>
+            </Border>
+          </Popup>
+
           <ToggleButton x:Name="ViewMenuButton"
                         Classes="top-menu-item"
                         Checked="OnViewMenuChecked"
@@ -1030,6 +1170,45 @@
                  VerticalOffset="4">
             <Border Classes="file-menu-popup">
               <StackPanel Spacing="2">
+                <Button Classes="file-menu-item"
+                        Tag="AddWorkspaceWindow"
+                        Click="OnViewMenuActionClick">
+                  <Grid ColumnDefinitions="18,*" ColumnSpacing="8">
+                    <TextBlock Text="+"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Foreground="#4FA0FF"
+                               FontWeight="SemiBold"/>
+                    <TextBlock Grid.Column="1" Text="Добавить окно"/>
+                  </Grid>
+                </Button>
+                <Button Classes="file-menu-item"
+                        Tag="TogglePlayerPanel"
+                        Click="OnViewMenuActionClick">
+                  <Grid ColumnDefinitions="18,*" ColumnSpacing="8">
+                    <TextBlock Text="✓"
+                               IsVisible="{Binding IsPlayerPanelVisible}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Foreground="#4FA0FF"
+                               FontWeight="SemiBold"/>
+                    <TextBlock Grid.Column="1" Text="Плеер"/>
+                  </Grid>
+                </Button>
+                <Button Classes="file-menu-item"
+                        Tag="ToggleBroadcastPanel"
+                        IsVisible="{Binding IsBroadcastEntityAvailable}"
+                        Click="OnViewMenuActionClick">
+                  <Grid ColumnDefinitions="18,*" ColumnSpacing="8">
+                    <TextBlock Text="✓"
+                               IsVisible="{Binding IsBroadcastPanelVisible}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Foreground="#4FA0FF"
+                               FontWeight="SemiBold"/>
+                    <TextBlock Grid.Column="1" Text="Трансляция"/>
+                  </Grid>
+                </Button>
                 <Button Classes="file-menu-item"
                         Tag="ToggleTimelinePanel"
                         Click="OnViewMenuActionClick">
@@ -1053,7 +1232,7 @@
                                VerticalAlignment="Center"
                                Foreground="#4FA0FF"
                                FontWeight="SemiBold"/>
-                    <TextBlock Grid.Column="1" Text="Типы событий/События"/>
+                    <TextBlock Grid.Column="1" Text="События"/>
                   </Grid>
                 </Button>
                 <Button Classes="file-menu-item"
@@ -1066,9 +1245,24 @@
                                VerticalAlignment="Center"
                                Foreground="#4FA0FF"
                                FontWeight="SemiBold"/>
-                    <TextBlock Grid.Column="1" Text="Плейлисты/Статистика"/>
+                    <TextBlock Grid.Column="1" Text="Клипы/Статистика"/>
                   </Grid>
                 </Button>
+              </StackPanel>
+            </Border>
+          </Popup>
+          <ToggleButton x:Name="SettingsMenuButton"
+                        Classes="top-menu-item"
+                        Checked="OnSettingsMenuChecked"
+                        Content="Настройки"/>
+          <Popup IsOpen="{Binding IsChecked, ElementName=SettingsMenuButton}"
+                 PlacementTarget="{Binding #SettingsMenuButton}"
+                 Placement="Bottom"
+                 HorizontalOffset="0"
+                 VerticalOffset="4">
+            <Border Classes="file-menu-popup">
+              <StackPanel Spacing="2">
+                <Button Classes="file-menu-item" Content="Настройки"/>
               </StackPanel>
             </Border>
           </Popup>
@@ -1085,6 +1279,7 @@
               <StackPanel Spacing="2">
                 <Button Classes="file-menu-item" Content="Документация" Click="OnHelpMenuActionClick"/>
                 <Button Classes="file-menu-item" Content="Горячие клавиши" Click="OnHelpMenuActionClick"/>
+                <Button Classes="file-menu-item" Tag="OpenLogsFolder" Content="Логи" Click="OnHelpMenuActionClick"/>
                 <Button Classes="file-menu-item" Content="О программе" Click="OnHelpMenuActionClick"/>
               </StackPanel>
             </Border>
@@ -1093,7 +1288,7 @@
       </Grid>
     </Border>
 
-    <Grid x:Name="MainLayoutGrid" Grid.Row="1" Margin="12" ClipToBounds="True">
+    <Grid x:Name="MainLayoutGrid" Grid.Row="1" Margin="0" Background="#0D0D0E" ClipToBounds="True">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="3.2*" MinWidth="420"/>
         <ColumnDefinition Width="6"/>
@@ -1109,59 +1304,146 @@
       </Grid.RowDefinitions>
 
       <Border x:Name="PlayerPanel" Grid.Row="0" Grid.Column="0" Classes="panel">
-        <Grid RowDefinitions="Auto,*,Auto" RowSpacing="14" ClipToBounds="True">
-          <StackPanel Spacing="4">
-            <TextBlock Classes="section-title" Text="Плеер"/>
-            <TextBlock Classes="section-subtitle" Text="{Binding StatusMessage}"/>
-          </StackPanel>
+        <Grid RowDefinitions="Auto,*,Auto" ClipToBounds="True">
+          <Border Grid.Row="0"
+                  Classes="panel-window-header"
+                  Cursor="SizeAll"
+                  Tag="Player"
+                  PointerPressed="OnPanelHeaderPointerPressed">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <StackPanel Orientation="Horizontal"
+                          Spacing="10"
+                          VerticalAlignment="Center">
+                <TextBlock Classes="section-title"
+                           VerticalAlignment="Center"
+                           Text="Плеер"/>
+                <TextBlock VerticalAlignment="Center"
+                           Foreground="#8FA3BF"
+                           FontSize="12">
+                  <Run Text="{Binding CurrentTimeText}"/>
+                  <Run Text=" / "/>
+                  <Run Text="{Binding DurationTimeText}"/>
+                </TextBlock>
+              </StackPanel>
+              <StackPanel Grid.Column="1"
+                          Orientation="Horizontal"
+                          Spacing="4">
+                <Button x:Name="PlayerDetachButton"
+                        Classes="panel-window-button"
+                        Tag="Player:Detach"
+                        Click="OnPanelWindowControlClick"
+                        ToolTip.Tip="Открыть плеер в отдельном окне"
+                        Content="↗"/>
+                <Button Classes="panel-window-button" Tag="Player:Minimize" Click="OnPanelWindowControlClick" Content="−"/>
+                <Button Classes="panel-window-button" Tag="Player:Maximize" Click="OnPanelWindowControlClick" Content="□"/>
+                <Button Classes="panel-window-button close-button" Tag="Player:Close" Click="OnPanelWindowControlClick" Content="×"/>
+              </StackPanel>
+            </Grid>
+          </Border>
 
           <Border x:Name="PlayerSurfaceHost"
                   Grid.Row="1"
                   Background="#050B14"
-                  BorderBrush="#2A3A55"
-                  BorderThickness="1"
-                  CornerRadius="10"
+                  BorderBrush="#111315"
+                  BorderThickness="0"
+                  CornerRadius="0"
                   ClipToBounds="True"
-                  IsVisible="{Binding IsPlayerSurfaceVisible}">
-            <Grid>
-              <vlc:VideoView x:Name="PlayerView"
-                             MediaPlayer="{Binding MediaPlayer}"
-                             HorizontalAlignment="Stretch"
-                             VerticalAlignment="Stretch"/>
+                  SizeChanged="OnPlayerSurfaceSizeChanged">
+            <Grid x:Name="PlayerSurfaceLayer">
+              <mpv:MpvView x:Name="PlayerView"
+                            Renderer="OpenGl"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            PointerWheelChanged="OnPlayerSurfacePointerWheelChanged"/>
 
               <Border Background="Transparent"
                       HorizontalAlignment="Stretch"
                       VerticalAlignment="Stretch"
-                      ZIndex="1"
-                      PointerPressed="OnPlayerSurfacePointerPressed"/>
+                      ZIndex="10"
+                      PointerPressed="OnPlayerSurfacePointerPressed"
+                      PointerMoved="OnPlayerSurfacePointerMoved"
+                      PointerReleased="OnPlayerSurfacePointerReleased"
+                      PointerWheelChanged="OnPlayerSurfacePointerWheelChanged"/>
 
               <Border HorizontalAlignment="Left"
                       VerticalAlignment="Bottom"
                       Margin="14"
                       Background="#B3000000"
-                      CornerRadius="8"
+                      CornerRadius="4"
                       Padding="10,6">
                 <TextBlock Text="{Binding CurrentTimeText}"
                            Foreground="#F7FAFF"
                            FontSize="13"
                            FontWeight="Medium"/>
               </Border>
+
+              <Border x:Name="VideoZoomDiagnosticsOverlay"
+                      HorizontalAlignment="Left"
+                      VerticalAlignment="Top"
+                      Margin="12"
+                      Padding="10,8"
+                      Background="#D9000000"
+                      BorderBrush="#31517A"
+                      BorderThickness="1"
+                      CornerRadius="4"
+                      IsHitTestVisible="False"
+                      IsVisible="False"
+                      ZIndex="20">
+                <TextBlock x:Name="VideoZoomDiagnosticsText"
+                           Foreground="#D6E4F8"
+                           FontFamily="Consolas"
+                           FontSize="12"
+                           LineHeight="16"/>
+              </Border>
+
+              <Border Width="64"
+                      Height="64"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Background="#66FFFFFF"
+                      CornerRadius="32"
+                      IsVisible="{Binding ShowOverlayPlayButton}"
+                      ZIndex="2">
+                <Path Data="M 2 1 L 18 10 L 2 19 Z"
+                      Fill="#FFFFFF"
+                      Width="28"
+                      Height="28"
+                      Stretch="Uniform"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Margin="5,0,0,0"/>
+              </Border>
             </Grid>
           </Border>
 
-          <Border Grid.Row="2" Classes="player-control-bar">
-            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto,Auto"
+          <Border x:Name="PlayerControlsHost"
+                  Grid.Row="2"
+                  Classes="player-control-bar"
+                  Background="#FF1D1D20"
+                  BorderBrush="#283244"
+                  BorderThickness="0,1,0,0"
+                  CornerRadius="0"
+                  Padding="10,6,10,14">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto"
                   ColumnSpacing="10"
                   VerticalAlignment="Center">
               <Button Grid.Column="0"
                       Classes="player-control-button"
-                      Command="{Binding StepBackwardCommand}">
-                <TextBlock Text="⏮"
-                           FontFamily="Segoe UI Symbol"
-                           FontSize="18"/>
+                      Command="{Binding SeekBackwardTenSecondsCommand}">
+                <TextBlock Text="-10"
+                           FontSize="13"
+                           FontWeight="SemiBold"/>
               </Button>
 
               <Button Grid.Column="1"
+                      Classes="player-control-button"
+                      Command="{Binding SeekBackwardFiveSecondsCommand}">
+                <TextBlock Text="-5"
+                           FontSize="13"
+                           FontWeight="SemiBold"/>
+              </Button>
+
+              <Button Grid.Column="2"
                       Classes="player-control-button"
                       Command="{Binding TogglePlayPauseCommand}">
                 <Grid Width="18"
@@ -1190,35 +1472,61 @@
                 </Grid>
               </Button>
 
-              <Button Grid.Column="2"
+              <Button Grid.Column="3"
                       Classes="player-control-button"
-                      Command="{Binding StepForwardCommand}">
-                <TextBlock Text="⏭"
-                           FontFamily="Segoe UI Symbol"
-                           FontSize="18"/>
+                      Command="{Binding SeekForwardFiveSecondsCommand}">
+                <TextBlock Text="+5"
+                           FontSize="13"
+                           FontWeight="SemiBold"/>
               </Button>
 
-              <Border Grid.Column="3"
+              <Button Grid.Column="4"
+                      Classes="player-control-button"
+                      Command="{Binding SeekForwardTenSecondsCommand}">
+                <TextBlock Text="+10"
+                           FontSize="13"
+                           FontWeight="SemiBold"/>
+              </Button>
+
+              <Border Grid.Column="5"
                       Classes="player-seek-surface"
+                      Height="36"
+                      Background="#101923"
+                      CornerRadius="5"
+                      Padding="0"
+                      VerticalAlignment="Center"
                       PointerPressed="OnSeekBarPointerPressed"
                       PointerMoved="OnSeekBarPointerMoved"
                       PointerReleased="OnSeekBarPointerReleased">
                 <Grid x:Name="SeekBarRoot"
-                      Height="18"
+                      Height="24"
                       VerticalAlignment="Center"
                       SizeChanged="OnSeekBarSizeChanged">
-                  <Border Classes="player-seek-track"/>
-                  <Border x:Name="SeekBarProgress" Classes="player-seek-progress"/>
+                  <Border Classes="player-seek-track"
+                          Height="8"
+                          Background="#71829E"
+                          CornerRadius="4"
+                          VerticalAlignment="Center"/>
+                  <Border x:Name="SeekBarProgress"
+                          Classes="player-seek-progress"
+                          Height="8"
+                          Background="#2F86FF"
+                          CornerRadius="4"
+                          HorizontalAlignment="Left"
+                          VerticalAlignment="Center"
+                          Width="0"/>
                   <Ellipse x:Name="SeekBarThumb"
-                           Width="18"
-                           Height="18"
+                           Width="20"
+                           Height="20"
                            HorizontalAlignment="Left"
                            VerticalAlignment="Center"
-                           Fill="#2F86FF"/>
+                           Fill="#2F86FF"
+                           Stroke="#D9E5F8"
+                           StrokeThickness="2"/>
                 </Grid>
               </Border>
 
-              <TextBlock Grid.Column="4"
+              <TextBlock Grid.Column="6"
                          VerticalAlignment="Center"
                          Foreground="#D9E5F8"
                          FontSize="14"
@@ -1229,7 +1537,7 @@
               </TextBlock>
 
               <ToggleButton x:Name="SpeedMenuButton"
-                            Grid.Column="5"
+                            Grid.Column="7"
                             Classes="player-control-button"
                             Content="{Binding PlaybackRateText}"/>
               <Popup IsOpen="{Binding IsChecked, ElementName=SpeedMenuButton}"
@@ -1237,12 +1545,26 @@
                      Placement="Top"
                      HorizontalOffset="0"
                      VerticalOffset="-8">
-                <Border Classes="file-menu-popup" Padding="6">
+                <Border Classes="file-menu-popup"
+                        Padding="6"
+                        Background="#FF121821"
+                        BorderBrush="#6B7E9F"
+                        BorderThickness="1"
+                        CornerRadius="5"
+                        Opacity="1"
+                        BoxShadow="0 16 40 0 #E6000000">
                   <ItemsControl ItemsSource="{Binding PlaybackRateOptions}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate>
                         <Button Classes="file-menu-item"
                                 MinWidth="86"
+                                Background="#FF121821"
+                                BorderBrush="#FF121821"
+                                BorderThickness="0"
+                                Foreground="#F7FAFF"
+                                HorizontalContentAlignment="Left"
+                                Padding="14,10"
+                                CornerRadius="4"
                                 Command="{Binding #RootWindow.DataContext.SetPlaybackRateCommand}"
                                 CommandParameter="{Binding}"
                                 Click="OnPlaybackRateMenuActionClick"
@@ -1254,7 +1576,7 @@
               </Popup>
 
               <ToggleButton x:Name="VolumeButton"
-                            Grid.Column="6"
+                            Grid.Column="8"
                             Classes="player-control-button">
                 <TextBlock Text="{Binding VolumeGlyph}" FontFamily="Segoe UI Symbol" FontSize="18"/>
               </ToggleButton>
@@ -1263,22 +1585,53 @@
                      Placement="Top"
                      HorizontalOffset="-4"
                      VerticalOffset="-8">
-                <Border Classes="file-menu-popup" Padding="10,12">
+                <Border x:Name="VolumePopupRoot"
+                        Classes="file-menu-popup"
+                        Padding="10,12"
+                        Background="#FF121821"
+                        BorderBrush="#6B7E9F"
+                        BorderThickness="1"
+                        CornerRadius="5"
+                        Opacity="1"
+                        BoxShadow="0 16 40 0 #E6000000">
                   <StackPanel Spacing="10" HorizontalAlignment="Center">
                     <Button Classes="player-control-button"
+                            Background="#24324A"
+                            BorderBrush="#24324A"
+                            BorderThickness="0"
+                            Foreground="#F7FAFF"
                             HorizontalAlignment="Center"
                             Command="{Binding ToggleMuteCommand}">
                       <TextBlock Text="{Binding VolumeGlyph}" FontFamily="Segoe UI Symbol" FontSize="18"/>
                     </Button>
                     <Border Classes="player-volume-surface"
+                            Width="24"
+                            Height="112"
+                            Background="Transparent"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
                             PointerPressed="OnVolumeBarPointerPressed"
                             PointerMoved="OnVolumeBarPointerMoved"
                             PointerReleased="OnVolumeBarPointerReleased">
                       <Grid x:Name="VolumeBarRoot"
                             Width="20"
                             Height="108">
-                        <Border Classes="player-volume-track" Margin="0,9"/>
-                        <Border x:Name="VolumeBarProgress" Classes="player-volume-progress" Margin="0,9"/>
+                        <Border Classes="player-volume-track"
+                                Margin="0,9"
+                                Width="7"
+                                Background="#71829E"
+                                CornerRadius="4"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Stretch"/>
+                        <Border x:Name="VolumeBarProgress"
+                                Classes="player-volume-progress"
+                                Margin="0,9"
+                                Width="7"
+                                Background="#2F86FF"
+                                CornerRadius="4"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Bottom"
+                                Height="0"/>
                         <Ellipse x:Name="VolumeBarThumb"
                                  Width="18"
                                  Height="18"
@@ -1291,7 +1644,7 @@
                 </Border>
               </Popup>
 
-              <Button Grid.Column="7"
+              <Button Grid.Column="9"
                       Classes="player-control-button"
                       Click="OnToggleFullscreenClick">
                 <TextBlock Text="⛶" FontFamily="Segoe UI Symbol" FontSize="18"/>
@@ -1305,8 +1658,10 @@
                     Grid.RowSpan="3"
                     Grid.Column="1"
                     Width="6"
-                    Background="#24324A"
+                    Background="#283244"
                     ResizeDirection="Columns"
+                    PointerEntered="OnWorkspaceSplitterPointerEntered"
+                    PointerExited="OnWorkspaceSplitterPointerExited"
                     HorizontalAlignment="Stretch"/>
 
       <Border x:Name="EventsPanel" Grid.Row="0"
@@ -1315,8 +1670,26 @@
               Classes="panel"
               Padding="0"
               IsVisible="{Binding IsEventsPanelVisible}">
-        <Grid>
-          <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+        <Grid RowDefinitions="Auto,*">
+          <Border Grid.Row="0"
+                  Classes="panel-window-header"
+                  Cursor="SizeAll"
+                  Tag="Events"
+                  PointerPressed="OnPanelHeaderPointerPressed">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <TextBlock Classes="section-title"
+                         Text="События"
+                         VerticalAlignment="Center"/>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
+                <Button Classes="panel-window-button" Tag="Events:Minimize" Click="OnPanelWindowControlClick" Content="−"/>
+                <Button Classes="panel-window-button" Tag="Events:Maximize" Click="OnPanelWindowControlClick" Content="□"/>
+                <Button Classes="panel-window-button close-button" Tag="Events:Close" Click="OnPanelWindowControlClick" Content="×"/>
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <ScrollViewer Grid.Row="1"
+                        HorizontalScrollBarVisibility="Disabled"
                         VerticalScrollBarVisibility="Auto"
                         ClipToBounds="True">
             <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="14" ClipToBounds="True">
@@ -1387,10 +1760,10 @@
                           </Grid>
                           <TextBlock Grid.Row="1"
                                      Foreground="#C9D7EB"
-                                     Text="{Binding StartFrame, StringFormat='Старт: {0}'}"/>
+                                     Text="{Binding StartTimeText, StringFormat='Старт: {0}'}"/>
                           <TextBlock Grid.Row="2"
                                      Foreground="#C9D7EB"
-                                     Text="{Binding EndFrame, StringFormat='Конец: {0}'}"/>
+                                     Text="{Binding EndTimeText, StringFormat='Конец: {0}'}"/>
                         </Grid>
                       </Border>
                     </DataTemplate>
@@ -1422,12 +1795,24 @@
                            SelectedItem="{Binding SelectedEventTypeItem, Mode=TwoWay}">
                     <ListBox.ItemTemplate>
                       <DataTemplate x:DataType="items:EventTypeItemViewModel">
-                        <Border Background="{Binding ColorHex}"
+                        <Border Background="#182031"
+                                BorderBrush="{Binding ColorHex}"
+                                BorderThickness="1"
                                 CornerRadius="8"
-                                Padding="12,10"
+                                Padding="10,9"
                                 DoubleTapped="OnEventTypeItemDoubleTapped">
-                          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                            <StackPanel Spacing="2">
+                          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                            <Border Width="30"
+                                    Height="30"
+                                    CornerRadius="5"
+                                    Background="{Binding ColorHex}">
+                              <TextBlock Text="{Binding Hotkey}"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"
+                                         Foreground="#F7FAFF"
+                                         FontWeight="Bold"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" Spacing="2">
                               <TextBlock Text="{Binding Name}"
                                          FontWeight="SemiBold"
                                          Foreground="#F7FAFF"/>
@@ -1435,7 +1820,7 @@
                                          Foreground="#DCE6F5"
                                          FontSize="12"/>
                             </StackPanel>
-                            <StackPanel Grid.Column="1"
+                            <StackPanel Grid.Column="2"
                                         Spacing="4"
                                         HorizontalAlignment="Right">
                               <TextBlock Text="{Binding EventCount}"
@@ -1470,7 +1855,8 @@
               </Grid>
             </Grid>
           </ScrollViewer>
-          <Border Classes="editor-overlay"
+          <Border Grid.Row="1"
+                  Classes="editor-overlay"
                   IsVisible="{Binding IsAddToPlaylistDialogOpen}">
             <Grid HorizontalAlignment="Stretch"
                   VerticalAlignment="Stretch">
@@ -1524,7 +1910,8 @@
           </Border>
 
 
-          <Border Classes="editor-overlay"
+          <Border Grid.Row="1"
+                  Classes="editor-overlay"
                   IsVisible="{Binding IsPresetEditorOpen}">
             <Grid HorizontalAlignment="Stretch"
                   VerticalAlignment="Stretch">
@@ -1630,7 +2017,8 @@
             </Grid>
           </Border>
 
-          <Border Classes="editor-overlay"
+          <Border Grid.Row="1"
+                  Classes="editor-overlay"
                   IsVisible="{Binding IsTagEventEditorOpen}">
             <Grid HorizontalAlignment="Stretch"
                   VerticalAlignment="Stretch">
@@ -1665,7 +2053,7 @@
                       <TextBox Classes="event-type-input"
                                Watermark="Старт"
                                IsReadOnly="True"
-                               Text="{Binding TagStartFrame}"/>
+                               Text="{Binding TagStartTimeText, Mode=OneWay}"/>
                       <Button Grid.Column="1"
                               Classes="action-button"
                               Command="{Binding UseCurrentFrameForTagStartCommand}"
@@ -1675,7 +2063,7 @@
                       <TextBox Classes="event-type-input"
                                Watermark="Конец"
                                IsReadOnly="True"
-                               Text="{Binding TagEndFrame}"/>
+                               Text="{Binding TagEndTimeText, Mode=OneWay}"/>
                       <Button Grid.Column="1"
                               Classes="action-button"
                               Command="{Binding UseCurrentFrameForTagEndCommand}"
@@ -1734,9 +2122,11 @@
                     Grid.RowSpan="3"
                     Grid.Column="3"
                     Width="6"
-                    Background="#24324A"
+                    Background="#283244"
                     ResizeDirection="Columns"
                     HorizontalAlignment="Stretch"
+                    PointerEntered="OnWorkspaceSplitterPointerEntered"
+                    PointerExited="OnWorkspaceSplitterPointerExited"
                     IsVisible="{Binding IsAnalysisPanelVisible}"/>
 
       <Border x:Name="AnalysisPanel" Grid.Row="0"
@@ -1745,15 +2135,32 @@
               Classes="panel"
               Padding="0"
               IsVisible="{Binding IsAnalysisPanelVisible}">
-        <Grid RowDefinitions="Auto,*">
-          <Border Grid.Row="0" Classes="panel-tabs">
+        <Grid RowDefinitions="Auto,Auto,*">
+          <Border Grid.Row="0"
+                  Classes="panel-window-header"
+                  Cursor="SizeAll"
+                  Tag="Analysis"
+                  PointerPressed="OnPanelHeaderPointerPressed">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <TextBlock Classes="section-title"
+                         Text="Клипы / статистика"
+                         VerticalAlignment="Center"/>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
+                <Button Classes="panel-window-button" Tag="Analysis:Minimize" Click="OnPanelWindowControlClick" Content="−"/>
+                <Button Classes="panel-window-button" Tag="Analysis:Maximize" Click="OnPanelWindowControlClick" Content="□"/>
+                <Button Classes="panel-window-button close-button" Tag="Analysis:Close" Click="OnPanelWindowControlClick" Content="×"/>
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <Border Grid.Row="1" Classes="panel-tabs">
             <Grid ColumnDefinitions="*,*" ColumnSpacing="0">
               <ToggleButton Grid.Column="0"
                             Classes="tab-button"
                             IsChecked="{Binding IsPlaylistsTabSelected}"
                             Command="{Binding SelectRightPanelTabCommand}"
                             CommandParameter="Playlists"
-                            Content="Плейлисты"/>
+                            Content="Клипы"/>
               <ToggleButton Grid.Column="1"
                             Classes="tab-button"
                             IsChecked="{Binding IsStatisticsTabSelected}"
@@ -1763,7 +2170,7 @@
             </Grid>
           </Border>
 
-          <ScrollViewer Grid.Row="1"
+          <ScrollViewer Grid.Row="2"
                         HorizontalScrollBarVisibility="Disabled"
                         VerticalScrollBarVisibility="Auto"
                         ClipToBounds="True"
@@ -1927,7 +2334,7 @@
             </Grid>
           </ScrollViewer>
 
-          <ScrollViewer Grid.Row="1"
+          <ScrollViewer Grid.Row="2"
                         HorizontalScrollBarVisibility="Disabled"
                         VerticalScrollBarVisibility="Auto"
                         ClipToBounds="True"
@@ -2035,140 +2442,193 @@
       <GridSplitter x:Name="TimelinePanelSplitter" Grid.Row="1"
                     Grid.Column="0"
                     Height="6"
-                    Background="#24324A"
+                    Background="#283244"
                     ResizeDirection="Rows"
+                    PointerEntered="OnWorkspaceSplitterPointerEntered"
+                    PointerExited="OnWorkspaceSplitterPointerExited"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"/>
 
       <Border x:Name="TimelinePanel"
               Grid.Row="2"
               Grid.Column="0"
-              Background="#1A1A1A"
-              BorderBrush="#1E2939"
-              BorderThickness="1,1,1,0"
-              CornerRadius="10"
-              Padding="1,0,0,0"
+              Classes="panel"
+              Padding="0"
               ClipToBounds="True"
               IsVisible="{Binding IsTimelineVisible}">
-        <Grid RowDefinitions="47.65625,*"
+        <Grid RowDefinitions="Auto,*"
               Background="#1A1A1A"
               ClipToBounds="True">
           <Border Grid.Row="0"
-                  Background="#1A1A1A"
-                  BorderBrush="#1E2939"
-                  BorderThickness="0,0,0,1">
-            <Grid ColumnDefinitions="Auto,*">
-            <StackPanel Orientation="Horizontal"
-                        Spacing="12"
-                        VerticalAlignment="Center"
-                        Margin="16,0,0,0">
-              <TextBlock Text="ТАЙМЛАЙН"
-                         Foreground="#99A1AF"
-                         FontSize="14"
-                         FontWeight="Medium"/>
-              <TextBlock Text="{Binding TimelineHeaderTimeText}"
-                         Foreground="#94A3B8"
-                         FontSize="14"/>
-            </StackPanel>
-
-            <ToggleButton x:Name="TimelineFilterButton"
-                          Grid.Column="1"
-                          Width="155.5"
-                          Height="30.65625"
-                          HorizontalAlignment="Right"
-                          Margin="0,0,12,0"
-                          VerticalAlignment="Center"
-                          CornerRadius="4"
-                          Background="#1E2939"
-                          BorderBrush="#1E2939"
-                          BorderThickness="1"
-                          IsChecked="{Binding IsTimelineFilterPopupOpen}">
-              <Grid ColumnDefinitions="Auto,*,Auto"
-                    Margin="12,0"
-                    VerticalAlignment="Center">
-                <Canvas Width="14"
-                        Height="14"
-                        VerticalAlignment="Center">
-                  <Path Data="M7.99964 17c-0.00009 0.18583 0.05161 0.36801 0.14929 0.5261 0.09768 0.15809 0.23748 0.28583 0.40371 0.3689l2 1c0.1525 0.0762 0.32194 0.11215 0.49224 0.10444 0.1703-0.00771 0.3358-0.05883 0.48079-0.14851 0.14498-0.08968 0.26464-0.21493 0.34759-0.36386 0.08296-0.14893 0.12646-0.3166 0.12638-0.48707l0-7c0.00022-0.49562 0.18446-0.9735 0.517-1.341l7.223-7.989c0.12946-0.14344 0.21459-0.32132 0.2451-0.51212 0.03051-0.1908 0.00509-0.38635-0.0732-0.56301-0.07828-0.17666-0.20606-0.32685-0.36789-0.43242-0.16183-0.10557-0.35079-0.162-0.54401-0.16245l-18 0c-0.19339 0.00007-0.38262 0.05622-0.54475 0.16164-0.16213 0.10542-0.29022 0.25559-0.36875 0.43232-0.07852 0.17673-0.10412 0.37245-0.07368 0.56343 0.03044 0.19098 0.1156 0.36904 0.24518 0.51261l7.225 7.989c0.33254 0.3675 0.51678 0.84538 0.517 1.341l0 6z"
-                        Stroke="#FFFFFF"
-                        StrokeThickness="1.1666666"
-                        StrokeLineCap="Round"
-                        StrokeJoin="Round"
-                        Width="11.66508"
-                        Height="11.083605"
-                        Stretch="Fill">
-                    <Path.RenderTransform>
-                      <TranslateTransform X="1.1669" Y="1.75"/>
-                    </Path.RenderTransform>
-                  </Path>
-                </Canvas>
-                <TextBlock Grid.Column="1"
-                           Text="{Binding TimelineFilterButtonText}"
-                           Foreground="#FFFFFF"
-                           FontSize="14"
-                           TextAlignment="Center"
-                           HorizontalAlignment="Center"
+                  Classes="panel-window-header"
+                  Cursor="SizeAll"
+                  Tag="Timeline"
+                  PointerPressed="OnPanelHeaderPointerPressed">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <StackPanel Orientation="Horizontal"
+                          Spacing="10"
+                          VerticalAlignment="Center">
+                <TextBlock Classes="section-title"
                            VerticalAlignment="Center"
-                           Margin="4,0"/>
-                <Canvas Grid.Column="2"
-                        Width="12"
-                        Height="12"
-                        VerticalAlignment="Center">
-                  <Path Data="M0 0l6 6 6-6"
-                        Stroke="#FFFFFF"
-                        StrokeThickness="1"
-                        StrokeLineCap="Round"
-                        StrokeJoin="Round"
-                        Width="6"
-                        Height="3"
-                        Stretch="Fill">
-                    <Path.RenderTransform>
-                      <TranslateTransform X="3" Y="4.5"/>
-                    </Path.RenderTransform>
-                  </Path>
-                </Canvas>
-              </Grid>
-            </ToggleButton>
+                           Text="Таймлайн"/>
+                <TextBlock Text="{Binding TimelineHeaderTimeText}"
+                           VerticalAlignment="Center"
+                           Foreground="#8FA3BF"
+                           FontSize="12"/>
+              </StackPanel>
 
-            <Popup PlacementTarget="{Binding #TimelineFilterButton}"
-                   IsOpen="{Binding IsTimelineFilterPopupOpen}"
-                   Placement="Bottom"
-                   HorizontalOffset="0"
-                   VerticalOffset="8">
-              <Border Background="#252525"
-                      BorderBrush="#1E2939"
-                      BorderThickness="1"
-                      CornerRadius="4"
-                      Padding="10"
-                      Width="220"
-                      MaxHeight="260">
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled">
-                  <ItemsControl ItemsSource="{Binding TimelineFilters}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate>
-                        <Grid ColumnDefinitions="Auto,*,Auto"
-                              ColumnSpacing="10"
-                              Height="32">
-                          <Ellipse Width="8"
-                                   Height="8"
-                                   Fill="{Binding ColorHex}"
-                                   VerticalAlignment="Center"/>
-                          <TextBlock Grid.Column="1"
-                                     Text="{Binding Name}"
-                                     Foreground="#D1D5DC"
-                                     FontSize="14"
+              <StackPanel Grid.Column="1"
+                          Orientation="Horizontal"
+                          Spacing="4"
+                          VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal"
+                            Spacing="4"
+                            Margin="0,0,12,0"
+                            VerticalAlignment="Center">
+                  <TextBlock Text="Масштаб"
+                             Foreground="#FFFFFF"
+                             FontSize="13"
+                             VerticalAlignment="Center"/>
+                  <Border x:Name="TimelineZoomSliderRoot"
+                          Width="164"
+                          Height="28"
+                          Background="#06101A"
+                          BorderBrush="#FFFFFF"
+                          BorderThickness="2"
+                          ClipToBounds="True"
+                          SizeChanged="OnTimelineZoomSliderSizeChanged"
+                          PointerPressed="OnTimelineZoomSliderPointerPressed"
+                          PointerMoved="OnTimelineZoomSliderPointerMoved"
+                          PointerReleased="OnTimelineZoomSliderPointerReleased">
+                    <Grid Margin="5,0"
+                          ClipToBounds="True">
+                      <Border Height="10"
+                              CornerRadius="0"
+                              Background="#073454"
+                              VerticalAlignment="Center"/>
+                      <Border x:Name="TimelineZoomSliderProgress"
+                              Width="0"
+                              Height="10"
+                              CornerRadius="0"
+                              Background="#0087D9"
+                              HorizontalAlignment="Left"
+                              VerticalAlignment="Center"/>
+                      <Ellipse x:Name="TimelineZoomSliderThumb"
+                               Width="20"
+                               Height="20"
+                               Fill="#0087D9"
+                               HorizontalAlignment="Left"
+                               VerticalAlignment="Center"/>
+                    </Grid>
+                  </Border>
+                  <TextBlock Text="{Binding TimelineZoomText}"
+                             Width="42"
+                             Foreground="#FFFFFF"
+                             FontSize="13"
+                             VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <ToggleButton x:Name="TimelineFilterButton"
+                              Width="155.5"
+                              Height="30"
+                              Margin="0,0,8,0"
+                              VerticalAlignment="Center"
+                              CornerRadius="4"
+                              Background="#1E2939"
+                              BorderBrush="#1E2939"
+                              BorderThickness="1"
+                              IsChecked="{Binding IsTimelineFilterPopupOpen}">
+                  <Grid ColumnDefinitions="Auto,*,Auto"
+                        Margin="12,0"
+                        VerticalAlignment="Center">
+                    <Canvas Width="14"
+                            Height="14"
+                            VerticalAlignment="Center">
+                      <Path Data="M7.99964 17c-0.00009 0.18583 0.05161 0.36801 0.14929 0.5261 0.09768 0.15809 0.23748 0.28583 0.40371 0.3689l2 1c0.1525 0.0762 0.32194 0.11215 0.49224 0.10444 0.1703-0.00771 0.3358-0.05883 0.48079-0.14851 0.14498-0.08968 0.26464-0.21493 0.34759-0.36386 0.08296-0.14893 0.12646-0.3166 0.12638-0.48707l0-7c0.00022-0.49562 0.18446-0.9735 0.517-1.341l7.223-7.989c0.12946-0.14344 0.21459-0.32132 0.2451-0.51212 0.03051-0.1908 0.00509-0.38635-0.0732-0.56301-0.07828-0.17666-0.20606-0.32685-0.36789-0.43242-0.16183-0.10557-0.35079-0.162-0.54401-0.16245l-18 0c-0.19339 0.00007-0.38262 0.05622-0.54475 0.16164-0.16213 0.10542-0.29022 0.25559-0.36875 0.43232-0.07852 0.17673-0.10412 0.37245-0.07368 0.56343 0.03044 0.19098 0.1156 0.36904 0.24518 0.51261l7.225 7.989c0.33254 0.3675 0.51678 0.84538 0.517 1.341l0 6z"
+                            Stroke="#FFFFFF"
+                            StrokeThickness="1.1666666"
+                            StrokeLineCap="Round"
+                            StrokeJoin="Round"
+                            Width="11.66508"
+                            Height="11.083605"
+                            Stretch="Fill">
+                        <Path.RenderTransform>
+                          <TranslateTransform X="1.1669" Y="1.75"/>
+                        </Path.RenderTransform>
+                      </Path>
+                    </Canvas>
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding TimelineFilterButtonText}"
+                               Foreground="#FFFFFF"
+                               FontSize="14"
+                               TextAlignment="Center"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Margin="4,0"/>
+                    <Canvas Grid.Column="2"
+                            Width="12"
+                            Height="12"
+                            VerticalAlignment="Center">
+                      <Path Data="M0 0l6 6 6-6"
+                            Stroke="#FFFFFF"
+                            StrokeThickness="1"
+                            StrokeLineCap="Round"
+                            StrokeJoin="Round"
+                            Width="6"
+                            Height="3"
+                            Stretch="Fill">
+                        <Path.RenderTransform>
+                          <TranslateTransform X="3" Y="4.5"/>
+                        </Path.RenderTransform>
+                      </Path>
+                    </Canvas>
+                  </Grid>
+                </ToggleButton>
+
+                <Button Classes="panel-window-button" Tag="Timeline:Minimize" Click="OnPanelWindowControlClick" Content="−"/>
+                <Button Classes="panel-window-button" Tag="Timeline:Maximize" Click="OnPanelWindowControlClick" Content="□"/>
+                <Button Classes="panel-window-button close-button" Tag="Timeline:Close" Click="OnPanelWindowControlClick" Content="×"/>
+              </StackPanel>
+
+              <Popup PlacementTarget="{Binding #TimelineFilterButton}"
+                     IsOpen="{Binding IsTimelineFilterPopupOpen}"
+                     Placement="Bottom"
+                     HorizontalOffset="0"
+                     VerticalOffset="8">
+                <Border Background="#252525"
+                        BorderBrush="#1E2939"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Padding="10"
+                        Width="220"
+                        MaxHeight="260">
+                  <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding TimelineFilters}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Grid ColumnDefinitions="Auto,*,Auto"
+                                ColumnSpacing="10"
+                                Height="32">
+                            <Ellipse Width="8"
+                                     Height="8"
+                                     Fill="{Binding ColorHex}"
                                      VerticalAlignment="Center"/>
-                          <CheckBox Grid.Column="2"
-                                    IsChecked="{Binding IsVisible}"
-                                    VerticalAlignment="Center"/>
-                        </Grid>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </ScrollViewer>
-              </Border>
-            </Popup>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Name}"
+                                       Foreground="#D1D5DC"
+                                       FontSize="14"
+                                       VerticalAlignment="Center"/>
+                            <CheckBox Grid.Column="2"
+                                      IsChecked="{Binding IsVisible}"
+                                      VerticalAlignment="Center"/>
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
+                </Border>
+              </Popup>
             </Grid>
           </Border>
 
@@ -2176,7 +2636,7 @@
                         HorizontalScrollBarVisibility="Disabled"
                         VerticalScrollBarVisibility="Auto"
                         ClipToBounds="True">
-            <Grid ColumnDefinitions="128,Auto"
+            <Grid ColumnDefinitions="128,*"
                   Background="#1A1A1A">
               <Grid Grid.Column="0"
                     Background="#1A1A1A">
@@ -2220,17 +2680,44 @@
               </Grid>
 
               <ScrollViewer x:Name="TimelineHorizontalScrollViewer" Grid.Column="1"
-                            HorizontalScrollBarVisibility="Visible"
+                            HorizontalScrollBarVisibility="Hidden"
                             VerticalScrollBarVisibility="Disabled"
-                            ClipToBounds="True">
-                <Grid Width="{Binding TimelineCanvasWidth}"
+                            ClipToBounds="True"
+                            SizeChanged="OnTimelineViewportSizeChanged"
+                            ScrollChanged="OnTimelineHorizontalScrollChanged"
+                            PointerPressed="OnTimelinePanPointerPressed"
+                            PointerMoved="OnTimelinePanPointerMoved"
+                            PointerReleased="OnTimelinePanPointerReleased"
+                            PointerWheelChanged="OnTimelinePointerWheelChanged">
+                <Grid x:Name="TimelineCanvasRoot"
+                      Width="{Binding TimelineCanvasWidth}"
                       HorizontalAlignment="Left"
-                      Background="#1A1A1A">
+                      Background="#1A1A1A"
+                      PointerPressed="OnTimelineSeekPointerPressed"
+                      PointerMoved="OnTimelineSeekPointerMoved"
+                      PointerReleased="OnTimelineSeekPointerReleased">
                   <Grid RowDefinitions="24,*">
                     <Border Grid.Row="0"
                             Background="#252525"
                             BorderBrush="#1E2939"
                             BorderThickness="0,0,0,1"/>
+
+                    <Canvas Grid.Row="0"
+                            Width="{Binding TimelineCanvasWidth}"
+                            Height="24"
+                            IsHitTestVisible="False"
+                            ZIndex="4">
+                      <Path Width="14"
+                            Height="9"
+                            Fill="#FB2C36"
+                            Stretch="Fill"
+                            Data="M 0 0 L 14 0 L 7 9 Z"
+                            Canvas.Left="{Binding TimelineCurrentLineLeft}">
+                        <Path.RenderTransform>
+                          <TranslateTransform X="-7" Y="14"/>
+                        </Path.RenderTransform>
+                      </Path>
+                    </Canvas>
 
                     <ItemsControl Grid.Row="0"
                                   Classes="timeline-ticks"
@@ -2330,7 +2817,8 @@
                                             Background="{Binding ColorHex}"
                                             CornerRadius="4"
                                             Opacity="0.8"
-                                            IsHitTestVisible="False"/>
+                                            Cursor="Hand"
+                                            PointerPressed="OnTimelineEventSegmentPointerPressed"/>
                                   </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                               </ItemsControl>
@@ -2344,6 +2832,329 @@
               </ScrollViewer>
             </Grid>
           </ScrollViewer>
+        </Grid>
+      </Border>
+
+      <Border x:Name="BroadcastPanel"
+              Classes="panel"
+              Padding="0"
+              IsVisible="{Binding IsBroadcastPanelVisible}">
+        <Grid RowDefinitions="Auto,*"
+              ClipToBounds="True">
+          <Border Grid.Row="0"
+                  Classes="panel-window-header"
+                  Cursor="SizeAll"
+                  Tag="Broadcast"
+                  PointerPressed="OnPanelHeaderPointerPressed">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <StackPanel Orientation="Horizontal"
+                          Spacing="10"
+                          VerticalAlignment="Center">
+                <TextBlock Classes="section-title"
+                           VerticalAlignment="Center"
+                           Text="Трансляция"/>
+                <TextBlock x:Name="BroadcastStatusText"
+                           VerticalAlignment="Center"
+                           Foreground="#8FA3BF"
+                           FontSize="12"
+                           Text="Ожидание камеры"/>
+              </StackPanel>
+              <StackPanel Grid.Column="1"
+                          Orientation="Horizontal"
+                          Spacing="4">
+                <Button Classes="panel-window-button" Tag="Broadcast:Minimize" Click="OnPanelWindowControlClick" Content="−"/>
+                <Button Classes="panel-window-button" Tag="Broadcast:Maximize" Click="OnPanelWindowControlClick" Content="□"/>
+                <Button Classes="panel-window-button close-button" Tag="Broadcast:Close" Click="OnPanelWindowControlClick" Content="×"/>
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <Border x:Name="BroadcastSurfaceHost"
+                  Grid.Row="1"
+                  Background="#050B14"
+                  BorderBrush="#111315"
+                  BorderThickness="0"
+                  ClipToBounds="True"
+                  SizeChanged="OnBroadcastSurfaceSizeChanged">
+            <Grid>
+              <mpv:MpvView x:Name="BroadcastView"
+                            Renderer="OpenGl"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"/>
+
+              <Border HorizontalAlignment="Left"
+                      VerticalAlignment="Top"
+                      Margin="12"
+                      Background="#CC050B14"
+                      BorderBrush="#334155"
+                      BorderThickness="1"
+                      CornerRadius="5"
+                      Padding="10,7">
+                <StackPanel Orientation="Horizontal"
+                            Spacing="8">
+                  <TextBlock Text="LIVE"
+                             Foreground="#FF3B3B"
+                             FontWeight="Bold"
+                             FontSize="12"/>
+                  <TextBlock Text="{Binding TimelineCurrentTimeText}"
+                             Foreground="#F7FAFF"
+                             FontSize="12"
+                             FontWeight="SemiBold"/>
+                </StackPanel>
+              </Border>
+
+              <Border HorizontalAlignment="Left"
+                      VerticalAlignment="Bottom"
+                      Margin="12"
+                      Background="#DD050B14"
+                      BorderBrush="#334155"
+                      BorderThickness="1"
+                      CornerRadius="7"
+                      Padding="8">
+                <StackPanel Orientation="Horizontal"
+                            Spacing="10"
+                            VerticalAlignment="Center">
+                  <Button Classes="broadcast-record-button"
+                          IsEnabled="{Binding CanToggleBroadcastLive}"
+                          Click="OnBroadcastLiveButtonClick"
+                          ToolTip.Tip="{Binding BroadcastLiveButtonText}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="8"
+                                VerticalAlignment="Center">
+                      <TextBlock Text="{Binding BroadcastLiveGlyph}"
+                                 FontSize="15"
+                                 FontWeight="SemiBold"/>
+                      <TextBlock Text="{Binding BroadcastLiveButtonText}"
+                                 FontSize="13"
+                                 FontWeight="SemiBold"/>
+                    </StackPanel>
+                  </Button>
+                  <Button Classes="broadcast-record-button"
+                          IsEnabled="{Binding CanUseBroadcastRecording}"
+                          Click="OnBroadcastRecordingButtonClick"
+                          ToolTip.Tip="{Binding BroadcastRecordingButtonText}">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="8"
+                                VerticalAlignment="Center">
+                      <TextBlock Text="{Binding BroadcastRecordingGlyph}"
+                                 Foreground="#FF3B3B"
+                                 FontSize="16"
+                                 FontWeight="SemiBold"/>
+                      <TextBlock Text="{Binding BroadcastRecordingButtonText}"
+                                 FontSize="13"
+                                 FontWeight="SemiBold"/>
+                    </StackPanel>
+                  </Button>
+                  <TextBlock Text="{Binding BroadcastRecordingStatusText}"
+                             VerticalAlignment="Center"
+                             Foreground="#C4D3EA"
+                             FontSize="12"/>
+                </StackPanel>
+              </Border>
+            </Grid>
+          </Border>
+        </Grid>
+      </Border>
+
+      <Button x:Name="EventsSplitterAddWindowButton"
+              Classes="workspace-edge-add-button"
+              IsVisible="False"
+              Content="+"
+              Click="OnWorkspaceEdgeAddWindowClick"
+              PointerEntered="OnWorkspaceAddButtonPointerEntered"
+              PointerExited="OnWorkspaceAddButtonPointerExited"
+              ToolTip.Tip="Добавить окно"/>
+
+      <Button x:Name="AnalysisSplitterAddWindowButton"
+              Classes="workspace-edge-add-button"
+              IsVisible="False"
+              Content="+"
+              Click="OnWorkspaceEdgeAddWindowClick"
+              PointerEntered="OnWorkspaceAddButtonPointerEntered"
+              PointerExited="OnWorkspaceAddButtonPointerExited"
+              ToolTip.Tip="Добавить окно"/>
+
+      <Button x:Name="TimelineSplitterAddWindowButton"
+              Classes="workspace-edge-add-button"
+              IsVisible="False"
+              Content="+"
+              Click="OnWorkspaceEdgeAddWindowClick"
+              PointerEntered="OnWorkspaceAddButtonPointerEntered"
+              PointerExited="OnWorkspaceAddButtonPointerExited"
+              ToolTip.Tip="Добавить окно"/>
+
+      <Border x:Name="SlotPlaceholder0"
+              Classes="workspace-empty-slot"
+              IsVisible="False">
+        <Grid>
+          <Button Classes="panel-window-button close-button"
+                  Tag="0"
+                  Click="OnCloseEmptySlotClick"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Top"
+                  ToolTip.Tip="Убрать пустое окно"
+                  Content="×"/>
+          <StackPanel HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Spacing="18">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Создать вид"
+                         HorizontalAlignment="Center"
+                         FontSize="18"
+                         FontWeight="SemiBold"
+                         Foreground="#F5F7FB"/>
+              <TextBlock Text="Выберите сущность для этого окна"
+                         HorizontalAlignment="Center"
+                         Foreground="#8FA3BF"/>
+            </StackPanel>
+            <WrapPanel HorizontalAlignment="Center">
+              <Button Classes="workspace-entity-button" Tag="0:Player" Click="OnCreateSlotEntityClick" Content="Плеер" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="0:Timeline" Click="OnCreateSlotEntityClick" Content="Таймлайн" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="0:EventsClips" Click="OnCreateSlotEntityClick" Content="События/клипы" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="0:Statistics" Click="OnCreateSlotEntityClick" Content="Статистика" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="0:Broadcast" Click="OnCreateSlotEntityClick" Content="Трансляция" Margin="4" IsVisible="{Binding IsBroadcastEntityAvailable}"/>
+            </WrapPanel>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Border x:Name="SlotPlaceholder1"
+              Classes="workspace-empty-slot"
+              IsVisible="False">
+        <Grid>
+          <Button Classes="panel-window-button close-button"
+                  Tag="1"
+                  Click="OnCloseEmptySlotClick"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Top"
+                  ToolTip.Tip="Убрать пустое окно"
+                  Content="×"/>
+          <StackPanel HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Spacing="18">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Создать вид"
+                         HorizontalAlignment="Center"
+                         FontSize="18"
+                         FontWeight="SemiBold"
+                         Foreground="#F5F7FB"/>
+              <TextBlock Text="Выберите сущность для этого окна"
+                         HorizontalAlignment="Center"
+                         Foreground="#8FA3BF"/>
+            </StackPanel>
+            <WrapPanel HorizontalAlignment="Center">
+              <Button Classes="workspace-entity-button" Tag="1:Player" Click="OnCreateSlotEntityClick" Content="Плеер" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="1:Timeline" Click="OnCreateSlotEntityClick" Content="Таймлайн" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="1:EventsClips" Click="OnCreateSlotEntityClick" Content="События/клипы" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="1:Statistics" Click="OnCreateSlotEntityClick" Content="Статистика" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="1:Broadcast" Click="OnCreateSlotEntityClick" Content="Трансляция" Margin="4" IsVisible="{Binding IsBroadcastEntityAvailable}"/>
+            </WrapPanel>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Border x:Name="SlotPlaceholder2"
+              Classes="workspace-empty-slot"
+              IsVisible="False">
+        <Grid>
+          <Button Classes="panel-window-button close-button"
+                  Tag="2"
+                  Click="OnCloseEmptySlotClick"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Top"
+                  ToolTip.Tip="Убрать пустое окно"
+                  Content="×"/>
+          <StackPanel HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Spacing="18">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Создать вид"
+                         HorizontalAlignment="Center"
+                         FontSize="18"
+                         FontWeight="SemiBold"
+                         Foreground="#F5F7FB"/>
+              <TextBlock Text="Выберите сущность для этого окна"
+                         HorizontalAlignment="Center"
+                         Foreground="#8FA3BF"/>
+            </StackPanel>
+            <WrapPanel HorizontalAlignment="Center">
+              <Button Classes="workspace-entity-button" Tag="2:Player" Click="OnCreateSlotEntityClick" Content="Плеер" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="2:Timeline" Click="OnCreateSlotEntityClick" Content="Таймлайн" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="2:EventsClips" Click="OnCreateSlotEntityClick" Content="События/клипы" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="2:Statistics" Click="OnCreateSlotEntityClick" Content="Статистика" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="2:Broadcast" Click="OnCreateSlotEntityClick" Content="Трансляция" Margin="4" IsVisible="{Binding IsBroadcastEntityAvailable}"/>
+            </WrapPanel>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Border x:Name="SlotPlaceholder3"
+              Classes="workspace-empty-slot"
+              IsVisible="False">
+        <Grid>
+          <Button Classes="panel-window-button close-button"
+                  Tag="3"
+                  Click="OnCloseEmptySlotClick"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Top"
+                  ToolTip.Tip="Убрать пустое окно"
+                  Content="×"/>
+          <StackPanel HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Spacing="18">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Создать вид"
+                         HorizontalAlignment="Center"
+                         FontSize="18"
+                         FontWeight="SemiBold"
+                         Foreground="#F5F7FB"/>
+              <TextBlock Text="Выберите сущность для этого окна"
+                         HorizontalAlignment="Center"
+                         Foreground="#8FA3BF"/>
+            </StackPanel>
+            <WrapPanel HorizontalAlignment="Center">
+              <Button Classes="workspace-entity-button" Tag="3:Player" Click="OnCreateSlotEntityClick" Content="Плеер" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="3:Timeline" Click="OnCreateSlotEntityClick" Content="Таймлайн" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="3:EventsClips" Click="OnCreateSlotEntityClick" Content="События/клипы" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="3:Statistics" Click="OnCreateSlotEntityClick" Content="Статистика" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="3:Broadcast" Click="OnCreateSlotEntityClick" Content="Трансляция" Margin="4" IsVisible="{Binding IsBroadcastEntityAvailable}"/>
+            </WrapPanel>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Border x:Name="SlotPlaceholder4"
+              Classes="workspace-empty-slot"
+              IsVisible="False">
+        <Grid>
+          <Button Classes="panel-window-button close-button"
+                  Tag="4"
+                  Click="OnCloseEmptySlotClick"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Top"
+                  ToolTip.Tip="Убрать пустое окно"
+                  Content="×"/>
+          <StackPanel HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Spacing="18">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Создать вид"
+                         HorizontalAlignment="Center"
+                         FontSize="18"
+                         FontWeight="SemiBold"
+                         Foreground="#F5F7FB"/>
+              <TextBlock Text="Выберите сущность для этого окна"
+                         HorizontalAlignment="Center"
+                         Foreground="#8FA3BF"/>
+            </StackPanel>
+            <WrapPanel HorizontalAlignment="Center">
+              <Button Classes="workspace-entity-button" Tag="4:Player" Click="OnCreateSlotEntityClick" Content="Плеер" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="4:Timeline" Click="OnCreateSlotEntityClick" Content="Таймлайн" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="4:EventsClips" Click="OnCreateSlotEntityClick" Content="События/клипы" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="4:Statistics" Click="OnCreateSlotEntityClick" Content="Статистика" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="4:Broadcast" Click="OnCreateSlotEntityClick" Content="Трансляция" Margin="4" IsVisible="{Binding IsBroadcastEntityAvailable}"/>
+            </WrapPanel>
+          </StackPanel>
         </Grid>
       </Border>
     <Border Grid.RowSpan="3"
@@ -2418,7 +3229,7 @@
 
                 <Button Grid.Column="1"
                         Classes="startup-action-card"
-                        Command="{Binding OpenSelectedRecentProjectCommand}">
+                        Command="{Binding OpenProjectPickerCommand}">
                   <Border Classes="startup-action-surface startup-action-surface-secondary"
                           BorderBrush="#B56BFF">
                     <Border.Background>
@@ -2454,13 +3265,9 @@
               <Grid Grid.Row="1"
                     RowDefinitions="Auto,Auto"
                     RowSpacing="16">
-                <Grid ColumnDefinitions="*,Auto"
-                      ColumnSpacing="12">
+                <Grid>
                   <TextBlock Classes="startup-section-title"
                              Text="НЕДАВНИЕ ПРОЕКТЫ"/>
-                  <TextBlock Grid.Column="1"
-                             Classes="startup-link"
-                             Text="Показать все"/>
                 </Grid>
 
                 <ItemsControl Grid.Row="1"
@@ -2521,6 +3328,118 @@
             </Grid>
           </Grid>
         </Border>
+
+        <Border Classes="editor-overlay"
+                IsVisible="{Binding IsProjectPickerOpen}">
+          <Grid HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch">
+            <Border Classes="new-project-dialog"
+                    Width="680"
+                    MaxWidth="680"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+              <Grid RowDefinitions="Auto,*,Auto"
+                    MaxHeight="620">
+                <Border Background="#2F2F32"
+                        BorderBrush="#4C566B"
+                        BorderThickness="0,0,0,1"
+                        CornerRadius="12,12,0,0"
+                        Padding="24,20">
+                  <Grid ColumnDefinitions="*,Auto"
+                        ColumnSpacing="12">
+                    <StackPanel Spacing="6">
+                      <TextBlock Classes="dialog-title"
+                                 Text="Открыть проект"/>
+                      <TextBlock Classes="dialog-subtitle"
+                                 Text="Выберите проект из списка"/>
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Classes="startup-close-button"
+                            Command="{Binding CloseProjectPickerCommand}"
+                            Content="✕"/>
+                  </Grid>
+                </Border>
+
+                <Border Grid.Row="1"
+                        Padding="24"
+                        Background="#252528">
+                  <Grid>
+                    <ListBox ItemsSource="{Binding ProjectPickerItems}"
+                             SelectedItem="{Binding SelectedRecentProject, Mode=TwoWay}"
+                             IsVisible="{Binding HasProjectPickerItems}"
+                             Background="Transparent"
+                             BorderBrush="Transparent"
+                             BorderThickness="0">
+                      <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="items:RecentProjectItemViewModel">
+                          <Border Background="#1A2435"
+                                  BorderBrush="#34425A"
+                                  BorderThickness="1"
+                                  CornerRadius="8"
+                                  Padding="14"
+                                  Margin="0,0,0,10">
+                            <Grid ColumnDefinitions="*,Auto"
+                                  ColumnSpacing="14">
+                              <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding Name}"
+                                           Foreground="#F5F7FB"
+                                           FontSize="15"
+                                           FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Matchup}"
+                                           Foreground="#C9D7EB"
+                                           FontSize="13"/>
+                                <TextBlock Text="{Binding Summary}"
+                                           Foreground="#8FA3BF"
+                                           FontSize="12"
+                                           TextWrapping="Wrap"
+                                           MaxLines="2"/>
+                              </StackPanel>
+                              <TextBlock Grid.Column="1"
+                                         Text="{Binding UpdatedAtText}"
+                                         Foreground="#7E8A9A"
+                                         FontSize="12"
+                                         VerticalAlignment="Top"/>
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <Border Classes="startup-empty-state"
+                            IsVisible="{Binding HasNoProjectPickerItems}">
+                      <StackPanel Spacing="8">
+                        <TextBlock Classes="recent-project-title"
+                                   Text="Пока нет проектов"/>
+                        <TextBlock Classes="recent-project-subtitle"
+                                   Text="Создайте первый проект, и он появится в этом списке."/>
+                      </StackPanel>
+                    </Border>
+                  </Grid>
+                </Border>
+
+                <Border Grid.Row="2"
+                        Background="#2F2F32"
+                        BorderBrush="#4C566B"
+                        BorderThickness="0,1,0,0"
+                        CornerRadius="0,0,12,12"
+                        Padding="24,16">
+                  <Grid ColumnDefinitions="*,Auto,Auto"
+                        ColumnSpacing="12">
+                    <Button Grid.Column="1"
+                            Classes="action-button"
+                            Command="{Binding CloseProjectPickerCommand}"
+                            Content="Отмена"/>
+                    <Button Grid.Column="2"
+                            Classes="action-button"
+                            Command="{Binding OpenSelectedRecentProjectCommand}"
+                            IsEnabled="{Binding CanOpenSelectedRecentProject}"
+                            Content="Открыть"/>
+                  </Grid>
+                </Border>
+              </Grid>
+            </Border>
+          </Grid>
+        </Border>
       </Grid>
     </Border>
 
@@ -2566,7 +3485,7 @@
                     Background="#2F2F32"
                     CornerRadius="0,0,12,12"
                     Padding="24">
-              <Grid RowDefinitions="Auto,Auto,Auto,Auto"
+              <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
                     RowSpacing="22">
                 <StackPanel Spacing="10">
                   <TextBlock Classes="form-label"
@@ -2584,30 +3503,30 @@
                   </Border>
                 </StackPanel>
 
-                <StackPanel Grid.Row="1"
-                            Spacing="10">
-                  <TextBlock Classes="form-label"
-                             Text="Описание (опционально)"/>
-                  <Border Classes="project-form-shell">
-                    <Grid>
-                      <TextBox Classes="project-form-plain-input"
-                               Text="{Binding NewProjectDescription}"
-                               AcceptsReturn="True"
-                               TextWrapping="Wrap"
-                               Height="96"/>
-                      <TextBlock Classes="project-input-placeholder multiline"
-                                 Text="Добавьте заметки о матче..."
-                                 Foreground="#8FA3BF"
-                                 Opacity="1"
-                                 IsVisible="{Binding NewProjectDescription, Converter={StaticResource StringNullOrEmptyToBoolConverter}}"/>
-                    </Grid>
-                  </Border>
-                </StackPanel>
+                <Border Grid.Row="1"
+                        Background="#171B22"
+                        BorderBrush="#3B4658"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="14">
+                  <Grid ColumnDefinitions="Auto,*"
+                        ColumnSpacing="12">
+                    <CheckBox IsChecked="{Binding NewProjectBroadcastMode}"
+                              VerticalAlignment="Top"/>
+                    <StackPanel Grid.Column="1"
+                                Spacing="4">
+                      <TextBlock Classes="form-label"
+                                 Text="Режим трансляции"/>
+                      <TextBlock Classes="dialog-subtitle"
+                                 Text="Проект для live-разметки: появится отдельное окно трансляции, а таймлайн будет идти от текущего live-времени."/>
+                    </StackPanel>
+                  </Grid>
+                </Border>
 
                 <StackPanel Grid.Row="2"
                             Spacing="10">
                   <TextBlock Classes="form-label"
-                             Text="Видео *"/>
+                             Text="{Binding NewProjectVideoLabelText}"/>
                   <Grid ColumnDefinitions="*,Auto"
                         ColumnSpacing="12">
                     <Border Classes="project-form-shell single-line">
@@ -2615,7 +3534,7 @@
                         <TextBox Classes="project-form-plain-input single-line"
                                  Text="{Binding NewProjectVideoPath}"/>
                         <TextBlock Classes="project-input-placeholder"
-                                   Text="Путь к видеофайлу"
+                                   Text="{Binding NewProjectVideoPlaceholderText}"
                                    Foreground="#8FA3BF"
                                    Opacity="1"
                                    IsVisible="{Binding NewProjectVideoPath, Converter={StaticResource StringNullOrEmptyToBoolConverter}}"/>
@@ -2628,7 +3547,154 @@
                   </Grid>
                 </StackPanel>
 
-                <Grid Grid.Row="3"
+                <StackPanel Grid.Row="3"
+                            Spacing="12">
+                  <StackPanel Spacing="4">
+                    <TextBlock Classes="form-label"
+                               Text="Схема расположения окон"/>
+                    <TextBlock Classes="dialog-subtitle"
+                               Text="Выберите стартовую сетку проекта. После этого любой слот можно заменить на нужную сущность."/>
+                  </StackPanel>
+
+                  <Grid ColumnDefinitions="*,*,*"
+                        RowDefinitions="Auto,Auto,Auto"
+                        ColumnSpacing="12"
+                        RowSpacing="12">
+                    <Button Grid.Row="0"
+                            Grid.Column="0"
+                            Classes="layout-choice-button"
+                            Tag="Reference"
+                            Click="OnWorkspaceLayoutClick">
+                      <StackPanel Spacing="8">
+                        <Border Classes="layout-preview">
+                          <Grid ColumnDefinitions="2*,*,*"
+                                RowDefinitions="*,Auto">
+                            <Border Grid.Column="0" Grid.RowSpan="2" BorderBrush="#243FFF" BorderThickness="0,0,2,0"/>
+                            <Border Grid.Column="1" Grid.RowSpan="2" BorderBrush="#243FFF" BorderThickness="0,0,2,0"/>
+                            <Border Grid.Column="0" Grid.Row="1" Height="2" Classes="layout-preview-line"/>
+                          </Grid>
+                        </Border>
+                        <TextBlock Text="Классическая"
+                                   HorizontalAlignment="Center"
+                                   FontWeight="SemiBold"/>
+                      </StackPanel>
+                    </Button>
+
+                    <Button Grid.Row="0"
+                            Grid.Column="1"
+                            Classes="layout-choice-button"
+                            Tag="SplitRows"
+                            Click="OnWorkspaceLayoutClick">
+                      <StackPanel Spacing="8">
+                        <Border Classes="layout-preview">
+                          <Grid RowDefinitions="*,*">
+                            <Border Grid.Row="0" BorderBrush="#243FFF" BorderThickness="0,0,0,2"/>
+                          </Grid>
+                        </Border>
+                        <TextBlock Text="Две строки"
+                                   HorizontalAlignment="Center"
+                                   FontWeight="SemiBold"/>
+                      </StackPanel>
+                    </Button>
+
+                    <Button Grid.Row="0"
+                            Grid.Column="2"
+                            Classes="layout-choice-button"
+                            Tag="TopTwoBottom"
+                            Click="OnWorkspaceLayoutClick">
+                      <StackPanel Spacing="8">
+                        <Border Classes="layout-preview">
+                          <Grid RowDefinitions="*,*"
+                                ColumnDefinitions="*,*">
+                            <Border Grid.Row="0" Grid.Column="0" BorderBrush="#243FFF" BorderThickness="0,0,2,2"/>
+                            <Border Grid.Row="0" Grid.Column="1" BorderBrush="#243FFF" BorderThickness="0,0,0,2"/>
+                          </Grid>
+                        </Border>
+                        <TextBlock Text="Два сверху"
+                                   HorizontalAlignment="Center"
+                                   FontWeight="SemiBold"/>
+                      </StackPanel>
+                    </Button>
+
+                    <Button Grid.Row="1"
+                            Grid.Column="0"
+                            Classes="layout-choice-button"
+                            Tag="FourGrid"
+                            Click="OnWorkspaceLayoutClick">
+                      <StackPanel Spacing="8">
+                        <Border Classes="layout-preview">
+                          <Grid RowDefinitions="*,*"
+                                ColumnDefinitions="*,*">
+                            <Border Grid.Column="0" BorderBrush="#243FFF" BorderThickness="0,0,2,0"/>
+                            <Border Grid.Row="0" BorderBrush="#243FFF" BorderThickness="0,0,0,2"/>
+                          </Grid>
+                        </Border>
+                        <TextBlock Text="Четыре окна"
+                                   HorizontalAlignment="Center"
+                                   FontWeight="SemiBold"/>
+                      </StackPanel>
+                    </Button>
+
+                    <Button Grid.Row="1"
+                            Grid.Column="1"
+                            Classes="layout-choice-button"
+                            Tag="SplitColumns"
+                            Click="OnWorkspaceLayoutClick">
+                      <StackPanel Spacing="8">
+                        <Border Classes="layout-preview">
+                          <Grid ColumnDefinitions="*,*">
+                            <Border Grid.Column="0" BorderBrush="#243FFF" BorderThickness="0,0,2,0"/>
+                          </Grid>
+                        </Border>
+                        <TextBlock Text="Две колонки"
+                                   HorizontalAlignment="Center"
+                                   FontWeight="SemiBold"/>
+                      </StackPanel>
+                    </Button>
+
+                    <Button Grid.Row="1"
+                            Grid.Column="2"
+                            Classes="layout-choice-button"
+                            Tag="BottomTwo"
+                            Click="OnWorkspaceLayoutClick">
+                      <StackPanel Spacing="8">
+                        <Border Classes="layout-preview">
+                          <Grid RowDefinitions="*,*"
+                                ColumnDefinitions="*,*">
+                            <Border Grid.Row="0" Grid.ColumnSpan="2" BorderBrush="#243FFF" BorderThickness="0,0,0,2"/>
+                            <Border Grid.Row="1" Grid.Column="0" BorderBrush="#243FFF" BorderThickness="0,0,2,0"/>
+                          </Grid>
+                        </Border>
+                        <TextBlock Text="Два снизу"
+                                   HorizontalAlignment="Center"
+                                   FontWeight="SemiBold"/>
+                      </StackPanel>
+                    </Button>
+
+                    <Button Grid.Row="2"
+                            Grid.Column="0"
+                            Classes="layout-choice-button"
+                            Tag="FiveWindows"
+                            Click="OnWorkspaceLayoutClick">
+                      <StackPanel Spacing="8">
+                        <Border Classes="layout-preview">
+                          <Grid RowDefinitions="*,*"
+                                ColumnDefinitions="*,*,*">
+                            <Border Grid.Row="0" Grid.Column="0" BorderBrush="#243FFF" BorderThickness="0,0,2,2"/>
+                            <Border Grid.Row="0" Grid.Column="1" BorderBrush="#243FFF" BorderThickness="0,0,2,2"/>
+                            <Border Grid.Row="0" Grid.Column="2" BorderBrush="#243FFF" BorderThickness="0,0,0,2"/>
+                            <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" BorderBrush="#243FFF" BorderThickness="0,0,2,0"/>
+                          </Grid>
+                        </Border>
+                        <TextBlock Text="Пять окон"
+                                   HorizontalAlignment="Center"
+                                   FontWeight="SemiBold"/>
+                      </StackPanel>
+                    </Button>
+                  </Grid>
+                </StackPanel>
+
+                <Grid Grid.Row="4"
                       RowDefinitions="Auto,Auto"
                       RowSpacing="22">
                   <Grid ColumnDefinitions="*,*"
@@ -2676,7 +3742,7 @@
                     <Button Grid.Column="1"
                             Classes="dialog-primary-button"
                             Command="{Binding ContinueNewProjectCommand}"
-                            Content="Далее: Импортировать видео"/>
+                            Content="{Binding NewProjectPrimaryButtonText}"/>
                   </Grid>
                 </Grid>
               </Grid>

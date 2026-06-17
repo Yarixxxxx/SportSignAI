@@ -8,7 +8,7 @@ namespace VideoAnalysis.Infrastructure.Persistence;
 
 public sealed class SqliteProjectRepository : IProjectRepository
 {
-    private const int SchemaVersion = 4;
+    private const int SchemaVersion = 6;
     private const string ProjectDatabaseFileName = "project.db";
     private const string ProjectManifestFileName = "project.json";
 
@@ -127,7 +127,7 @@ public sealed class SqliteProjectRepository : IProjectRepository
 
         await using var connection = await OpenProjectConnectionByFolderAsync(projectFolderPath, cancellationToken);
         const string sql = """
-                           SELECT id, project_id, title, original_file_name, stored_file_path, imported_at
+                           SELECT id, project_id, title, original_file_name, stored_file_path, imported_at, proxy_file_path
                            FROM ProjectVideo
                            WHERE project_id = $project_id
                            LIMIT 1;
@@ -560,7 +560,7 @@ public sealed class SqliteProjectRepository : IProjectRepository
 
         await using var connection = await OpenProjectConnectionByFolderAsync(projectFolderPath, cancellationToken);
         const string sql = """
-                           SELECT id, name, description, home_team_name, away_team_name, project_folder_path, created_at, updated_at
+                           SELECT id, name, description, home_team_name, away_team_name, project_folder_path, created_at, updated_at, is_broadcast_mode
                            FROM Project
                            LIMIT 1;
                            """;
@@ -592,7 +592,8 @@ public sealed class SqliteProjectRepository : IProjectRepository
             project.AwayTeamName,
             project.ProjectFolderPath,
             project.CreatedAtUtc,
-            project.UpdatedAtUtc);
+            project.UpdatedAtUtc,
+            project.IsBroadcastMode);
 
         var manifestPath = GetProjectManifestPath(project.ProjectFolderPath);
         Directory.CreateDirectory(project.ProjectFolderPath);
@@ -640,7 +641,7 @@ public sealed class SqliteProjectRepository : IProjectRepository
     private static async Task<Project?> GetProjectInternalAsync(SqliteConnection connection, Guid projectId, CancellationToken cancellationToken)
     {
         const string sql = """
-                           SELECT id, name, description, home_team_name, away_team_name, project_folder_path, created_at, updated_at
+                           SELECT id, name, description, home_team_name, away_team_name, project_folder_path, created_at, updated_at, is_broadcast_mode
                            FROM Project
                            WHERE id = $id
                            LIMIT 1;
@@ -724,7 +725,7 @@ public sealed class SqliteProjectRepository : IProjectRepository
     private static async Task<IReadOnlyList<Project>> QueryLegacyProjectsAsync(SqliteConnection connection, CancellationToken cancellationToken)
     {
         const string sql = """
-                           SELECT id, name, description, home_team_name, away_team_name, project_folder_path, created_at, updated_at
+                           SELECT id, name, description, home_team_name, away_team_name, project_folder_path, created_at, updated_at, 0 AS is_broadcast_mode
                            FROM Project
                            ORDER BY updated_at DESC;
                            """;
@@ -735,7 +736,7 @@ public sealed class SqliteProjectRepository : IProjectRepository
     private static async Task<ProjectVideo?> GetLegacyProjectVideoAsync(SqliteConnection connection, Guid projectId, CancellationToken cancellationToken)
     {
         const string sql = """
-                           SELECT id, project_id, title, original_file_name, stored_file_path, imported_at
+                           SELECT id, project_id, title, original_file_name, stored_file_path, imported_at, NULL AS proxy_file_path
                            FROM ProjectVideo
                            WHERE project_id = $project_id
                            LIMIT 1;
@@ -962,7 +963,8 @@ public sealed class SqliteProjectRepository : IProjectRepository
             reader.IsDBNull(2) ? null : reader.GetString(2),
             reader.IsDBNull(3) ? null : reader.GetString(3),
             reader.IsDBNull(4) ? null : reader.GetString(4),
-            reader.GetString(5));
+            reader.GetString(5),
+            !reader.IsDBNull(8) && reader.GetInt64(8) == 1);
     }
 
     private static Project MapProjectManifest(ProjectManifest manifest)
@@ -975,7 +977,8 @@ public sealed class SqliteProjectRepository : IProjectRepository
             manifest.Description,
             manifest.HomeTeamName,
             manifest.AwayTeamName,
-            manifest.ProjectFolderPath);
+            manifest.ProjectFolderPath,
+            manifest.IsBroadcastMode);
     }
 
     private static ProjectVideo MapProjectVideo(SqliteDataReader reader)
@@ -986,7 +989,8 @@ public sealed class SqliteProjectRepository : IProjectRepository
             reader.GetString(2),
             reader.GetString(3),
             reader.GetString(4),
-            DateTimeOffset.Parse(reader.GetString(5)));
+            DateTimeOffset.Parse(reader.GetString(5)),
+            reader.IsDBNull(6) ? null : reader.GetString(6));
     }
 
     private static Playlist MapPlaylist(SqliteDataReader reader)
@@ -1054,15 +1058,16 @@ public sealed class SqliteProjectRepository : IProjectRepository
     {
         const string sql = """
                            INSERT INTO Project (
-                               id, name, description, home_team_name, away_team_name, project_folder_path, created_at, updated_at)
+                               id, name, description, home_team_name, away_team_name, project_folder_path, created_at, updated_at, is_broadcast_mode)
                            VALUES (
-                               $id, $name, $description, $home_team_name, $away_team_name, $project_folder_path, $created_at, $updated_at)
+                               $id, $name, $description, $home_team_name, $away_team_name, $project_folder_path, $created_at, $updated_at, $is_broadcast_mode)
                            ON CONFLICT(id) DO UPDATE SET
                                name = excluded.name,
                                description = excluded.description,
                                home_team_name = excluded.home_team_name,
                                away_team_name = excluded.away_team_name,
                                project_folder_path = excluded.project_folder_path,
+                               is_broadcast_mode = excluded.is_broadcast_mode,
                                updated_at = excluded.updated_at;
                            """;
 
@@ -1076,6 +1081,7 @@ public sealed class SqliteProjectRepository : IProjectRepository
         command.Parameters.AddWithValue("$project_folder_path", project.ProjectFolderPath);
         command.Parameters.AddWithValue("$created_at", project.CreatedAtUtc.ToString("O"));
         command.Parameters.AddWithValue("$updated_at", project.UpdatedAtUtc.ToString("O"));
+        command.Parameters.AddWithValue("$is_broadcast_mode", project.IsBroadcastMode ? 1 : 0);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
@@ -1083,15 +1089,16 @@ public sealed class SqliteProjectRepository : IProjectRepository
     {
         const string sql = """
                            INSERT INTO ProjectVideo (
-                               id, project_id, title, original_file_name, stored_file_path, imported_at)
+                               id, project_id, title, original_file_name, stored_file_path, imported_at, proxy_file_path)
                            VALUES (
-                               $id, $project_id, $title, $original_file_name, $stored_file_path, $imported_at)
+                               $id, $project_id, $title, $original_file_name, $stored_file_path, $imported_at, $proxy_file_path)
                            ON CONFLICT(project_id) DO UPDATE SET
                                id = excluded.id,
                                title = excluded.title,
                                original_file_name = excluded.original_file_name,
                                stored_file_path = excluded.stored_file_path,
-                               imported_at = excluded.imported_at;
+                               imported_at = excluded.imported_at,
+                               proxy_file_path = excluded.proxy_file_path;
                            """;
 
         await using var command = connection.CreateCommand();
@@ -1102,6 +1109,7 @@ public sealed class SqliteProjectRepository : IProjectRepository
         command.Parameters.AddWithValue("$original_file_name", projectVideo.OriginalFileName);
         command.Parameters.AddWithValue("$stored_file_path", projectVideo.StoredFilePath);
         command.Parameters.AddWithValue("$imported_at", projectVideo.ImportedAtUtc.ToString("O"));
+        command.Parameters.AddWithValue("$proxy_file_path", DbValue(projectVideo.ProxyFilePath));
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
@@ -1273,7 +1281,8 @@ public sealed class SqliteProjectRepository : IProjectRepository
                                away_team_name TEXT NULL,
                                project_folder_path TEXT NOT NULL,
                                created_at TEXT NOT NULL,
-                               updated_at TEXT NOT NULL
+                               updated_at TEXT NOT NULL,
+                               is_broadcast_mode INTEGER NOT NULL DEFAULT 0
                            );
 
                            CREATE TABLE IF NOT EXISTS ProjectVideo (
@@ -1282,6 +1291,7 @@ public sealed class SqliteProjectRepository : IProjectRepository
                                title TEXT NOT NULL,
                                original_file_name TEXT NOT NULL,
                                stored_file_path TEXT NOT NULL,
+                               proxy_file_path TEXT NULL,
                                imported_at TEXT NOT NULL
                            );
 
@@ -1356,11 +1366,63 @@ public sealed class SqliteProjectRepository : IProjectRepository
                            """;
 
         await ExecuteNonQueryAsync(connection, sql, cancellationToken);
+        await EnsureProjectColumnsAsync(connection, cancellationToken);
+        await EnsureProjectVideoColumnsAsync(connection, cancellationToken);
         await EnsureTagPresetColumnsAsync(connection, cancellationToken);
 
         await using var command = connection.CreateCommand();
         command.CommandText = $"PRAGMA user_version = {SchemaVersion};";
         await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private static async Task EnsureProjectColumnsAsync(SqliteConnection connection, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = "PRAGMA table_info(Project);";
+
+        var hasIsBroadcastMode = false;
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var columnName = reader.GetString(1);
+                if (string.Equals(columnName, "is_broadcast_mode", StringComparison.OrdinalIgnoreCase))
+                {
+                    hasIsBroadcastMode = true;
+                    break;
+                }
+            }
+        }
+
+        if (!hasIsBroadcastMode)
+        {
+            await ExecuteNonQueryAsync(connection, "ALTER TABLE Project ADD COLUMN is_broadcast_mode INTEGER NOT NULL DEFAULT 0;", cancellationToken);
+        }
+    }
+
+    private static async Task EnsureProjectVideoColumnsAsync(SqliteConnection connection, CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = "PRAGMA table_info(ProjectVideo);";
+
+        var hasProxyFilePath = false;
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var columnName = reader.GetString(1);
+                if (string.Equals(columnName, "proxy_file_path", StringComparison.OrdinalIgnoreCase))
+                {
+                    hasProxyFilePath = true;
+                    break;
+                }
+            }
+        }
+
+        if (!hasProxyFilePath)
+        {
+            await ExecuteNonQueryAsync(connection, "ALTER TABLE ProjectVideo ADD COLUMN proxy_file_path TEXT NULL;", cancellationToken);
+        }
     }
 
     private static async Task EnsureTagPresetColumnsAsync(SqliteConnection connection, CancellationToken cancellationToken)

@@ -10,14 +10,23 @@
     <PackageReference Include="Avalonia.ReactiveUI" Version="11.3.0" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.0" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="HanumanInstitute.LibMpv.Avalonia" Version="0.9.1" />
     <PackageReference Include="LibVLCSharp.Avalonia" Version="3.8.5" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.10" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+    <PackageReference Include="Endpne.LibMPV.Windows" Version="0.40.0" />
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23" />
   </ItemGroup>
+
+  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+    <EndpneLibMpvWindowsVersion>0.40.0</EndpneLibMpvWindowsVersion>
+    <EndpneLibMpvWindowsX64Root>$(NuGetPackageRoot)endpne.libmpv.windows\$(EndpneLibMpvWindowsVersion)\build\x64\</EndpneLibMpvWindowsX64Root>
+    <VideoLanLibVlcWindowsVersion>3.0.23</VideoLanLibVlcWindowsVersion>
+    <VideoLanLibVlcWindowsX64Root>$(NuGetPackageRoot)videolan.libvlc.windows\$(VideoLanLibVlcWindowsVersion)\build\x64\</VideoLanLibVlcWindowsX64Root>
+  </PropertyGroup>
 
   <ItemGroup Condition="'$(RuntimeIdentifier)' == 'osx-arm64' Or '$(RuntimeIdentifier)' == 'osx-x64' Or ('$(RuntimeIdentifier)' == '' And '$(OS)' != 'Windows_NT')">
     <PackageReference Include="VideoLAN.LibVLC.Mac" Version="3.0.23" />
@@ -25,24 +34,37 @@
 
   <ItemGroup>
     <AvaloniaXaml Remove="Views\MainWindow.axaml" />
+    <AvaloniaXaml Remove="Views\SplashWindow.axaml" />
     <AvaloniaResource Include="Views\MainWindow.axaml" />
+    <AvaloniaResource Include="Views\SplashWindow.axaml" />
     <AvaloniaResource Include="Assets\app-icon.png" />
     <AvaloniaResource Include="Assets\app-icon.ico" />
+    <AvaloniaResource Include="Assets\Splash\*.png" />
     <None Include="Assets\app-icon.svg" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
-    <None Include="..\..\tools\ffmpeg\bin\ffmpeg.exe"
-          Link="ffmpeg.exe"
-          CopyToOutputDirectory="PreserveNewest"
-          CopyToPublishDirectory="PreserveNewest" />
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT' And Exists('..\..\tools\ffmpeg\bin\ffmpeg.exe')">
+    <None Include="..\..\tools\ffmpeg\bin\ffmpeg.exe" Link="ffmpeg.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT' And Exists('$(EndpneLibMpvWindowsX64Root)libmpv-2.dll')">
+    <Content Include="$(EndpneLibMpvWindowsX64Root)*.dll">
+      <Link>%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT' And Exists('$(VideoLanLibVlcWindowsX64Root)libvlc.dll')">
+    <Content Include="$(VideoLanLibVlcWindowsX64Root)**\*.*">
+      <Link>libvlc\win-x64\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup Condition="'$(RuntimeIdentifier)' == 'osx-arm64'">
-    <None Include="..\..\tools\ffmpeg\macos-arm64\unpacked\ffmpeg"
-          Link="ffmpeg"
-          CopyToOutputDirectory="PreserveNewest"
-          CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\tools\ffmpeg\macos-arm64\unpacked\ffmpeg" Link="ffmpeg" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <PropertyGroup>

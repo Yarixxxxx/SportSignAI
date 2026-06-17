@@ -8,4 +8,5 @@ internal sealed record ProjectManifest(
     string? AwayTeamName,
     string ProjectFolderPath,
     DateTimeOffset CreatedAtUtc,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc,
+    bool IsBroadcastMode = false);
