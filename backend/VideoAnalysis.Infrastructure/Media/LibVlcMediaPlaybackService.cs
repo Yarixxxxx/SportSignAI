@@ -40,8 +40,8 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         TimeSpan.FromMilliseconds(600)
     ];
 
-    private readonly LibVLC _libVlc;
-    private readonly MediaPlayer _mediaPlayer;
+    private LibVLC? _libVlc;
+    private MediaPlayer? _mediaPlayer;
     private LibVLCSharp.Shared.Media? _currentMedia;
     private IntPtr _preferredVideoHandle;
     private CancellationTokenSource? _resumePlaybackCancellation;
@@ -59,39 +59,58 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
     private long _sourceVideoHeight;
     private long _timeChangedVersion;
     private long _lastMediaTimeMilliseconds;
+    private int _volume = 100;
+    private bool _isMuted;
     private bool _disposed;
 
     public LibVlcMediaPlaybackService()
     {
-        LibVLCSharp.Shared.Core.Initialize();
-        _libVlc = new LibVLC(LowLatencyLibVlcOptions);
-        _mediaPlayer = new MediaPlayer(_libVlc);
-
-        _mediaPlayer.TimeChanged += OnTimeChanged;
-        _mediaPlayer.LengthChanged += OnLengthChanged;
-        _mediaPlayer.Playing += (_, _) =>
-        {
-            TryRefreshVideoSize();
-            ApplyVideoZoom();
-            PlaybackStateChanged?.Invoke(this, EventArgs.Empty);
-        };
-        _mediaPlayer.Paused += (_, _) => PlaybackStateChanged?.Invoke(this, EventArgs.Empty);
-        _mediaPlayer.Stopped += (_, _) => PlaybackStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public event EventHandler? PlaybackStateChanged;
     public event EventHandler<long>? FrameChanged;
 
-    public bool IsPlaying => _mediaPlayer.IsPlaying;
-    public bool IsMuted => _mediaPlayer.Mute;
+    public bool IsPlaying => _mediaPlayer?.IsPlaying == true;
+    public bool IsMuted => _mediaPlayer?.Mute ?? _isMuted;
     public long CurrentFrame { get; private set; }
     public long DurationFrames { get; private set; }
     public double FramesPerSecond { get; private set; } = 30d;
     public long VideoWidth { get; private set; }
     public long VideoHeight { get; private set; }
-    public int Volume => _mediaPlayer.Volume;
+    public int Volume => _mediaPlayer?.Volume ?? _volume;
     public double PlaybackRate => _requestedPlaybackRate;
-    public MediaPlayer MediaPlayer => _mediaPlayer;
+    public MediaPlayer? MediaPlayer => _mediaPlayer;
+
+    private MediaPlayer EnsureMediaPlayer()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        if (_mediaPlayer is not null)
+        {
+            return _mediaPlayer;
+        }
+
+        LibVLCSharp.Shared.Core.Initialize();
+        _libVlc = new LibVLC(LowLatencyLibVlcOptions);
+        _mediaPlayer = new MediaPlayer(_libVlc)
+        {
+            Volume = _volume,
+            Mute = _isMuted
+        };
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && _preferredVideoHandle != IntPtr.Zero)
+        {
+            _mediaPlayer.Hwnd = _preferredVideoHandle;
+        }
+
+        _mediaPlayer.TimeChanged += OnTimeChanged;
+        _mediaPlayer.LengthChanged += OnLengthChanged;
+        _mediaPlayer.Playing += OnPlaying;
+        _mediaPlayer.Paused += OnPausedOrStopped;
+        _mediaPlayer.Stopped += OnPausedOrStopped;
+
+        return _mediaPlayer;
+    }
 
     public Task<MediaMetadata> OpenAsync(string filePath, CancellationToken cancellationToken)
     {
@@ -101,6 +120,8 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
             throw new FileNotFoundException("Video file not found.", filePath);
         }
 
+        var mediaPlayer = EnsureMediaPlayer();
+        var libVlc = _libVlc ?? throw new InvalidOperationException("LibVLC is not initialized.");
         _currentMedia?.Dispose();
         _rawVideoWidth = 0;
         _rawVideoHeight = 0;
@@ -114,10 +135,10 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         _requestedVideoZoomCenterY = 0.5d;
         _requestedVideoViewportWidth = 0d;
         _requestedVideoViewportHeight = 0d;
-        _mediaPlayer.CropGeometry = string.Empty;
-        _mediaPlayer.AspectRatio = null;
-        _mediaPlayer.Scale = 0;
-        _currentMedia = new LibVLCSharp.Shared.Media(_libVlc, new Uri(filePath));
+        mediaPlayer.CropGeometry = string.Empty;
+        mediaPlayer.AspectRatio = null;
+        mediaPlayer.Scale = 0;
+        _currentMedia = new LibVLCSharp.Shared.Media(libVlc, new Uri(filePath));
         var media = _currentMedia;
         foreach (var option in LowLatencyMediaOptions)
         {
@@ -150,7 +171,7 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
             }
         }
 
-        _mediaPlayer.Media = media;
+        mediaPlayer.Media = media;
         UpdateDuration(media.Duration);
         CurrentFrame = 0;
 
@@ -170,6 +191,8 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
             throw new ArgumentException("Live stream source is required.", nameof(source));
         }
 
+        var mediaPlayer = EnsureMediaPlayer();
+        var libVlc = _libVlc ?? throw new InvalidOperationException("LibVLC is not initialized.");
         _currentMedia?.Dispose();
         _rawVideoWidth = 0;
         _rawVideoHeight = 0;
@@ -183,15 +206,15 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         _requestedVideoZoomCenterY = 0.5d;
         _requestedVideoViewportWidth = 0d;
         _requestedVideoViewportHeight = 0d;
-        _mediaPlayer.CropGeometry = string.Empty;
-        _mediaPlayer.AspectRatio = null;
-        _mediaPlayer.Scale = 0;
+        mediaPlayer.CropGeometry = string.Empty;
+        mediaPlayer.AspectRatio = null;
+        mediaPlayer.Scale = 0;
 
         var uri = Uri.TryCreate(source, UriKind.Absolute, out var parsedUri)
             ? parsedUri
             : throw new InvalidOperationException($"Live stream source is invalid: {source}");
 
-        _currentMedia = new LibVLCSharp.Shared.Media(_libVlc, uri);
+        _currentMedia = new LibVLCSharp.Shared.Media(libVlc, uri);
         var media = _currentMedia;
         foreach (var option in LowLatencyMediaOptions)
         {
@@ -199,7 +222,7 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         }
 
         media.Parse(MediaParseOptions.ParseNetwork);
-        _mediaPlayer.Media = media;
+        mediaPlayer.Media = media;
         CurrentFrame = 0;
         DurationFrames = 1;
         TryRefreshVideoSize();
@@ -210,17 +233,23 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
 
     public void Play()
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
-            _mediaPlayer.Hwnd == IntPtr.Zero &&
-            _preferredVideoHandle != IntPtr.Zero)
+        if (_currentMedia is null && _mediaPlayer is null)
         {
-            _mediaPlayer.Hwnd = _preferredVideoHandle;
+            return;
         }
 
-        _mediaPlayer.SetPause(false);
-        if (!_mediaPlayer.IsPlaying)
+        var mediaPlayer = EnsureMediaPlayer();
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
+            mediaPlayer.Hwnd == IntPtr.Zero &&
+            _preferredVideoHandle != IntPtr.Zero)
         {
-            _mediaPlayer.Play();
+            mediaPlayer.Hwnd = _preferredVideoHandle;
+        }
+
+        mediaPlayer.SetPause(false);
+        if (!mediaPlayer.IsPlaying)
+        {
+            mediaPlayer.Play();
         }
 
         TryRefreshVideoSize();
@@ -229,12 +258,18 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
     public void Pause()
     {
         CancelPendingPlaybackResume();
-        _mediaPlayer.SetPause(true);
+        _mediaPlayer?.SetPause(true);
     }
 
     public void SeekToFrame(long frame)
     {
-        var wasPlaying = _mediaPlayer.IsPlaying;
+        var mediaPlayer = _mediaPlayer;
+        if (mediaPlayer is null)
+        {
+            return;
+        }
+
+        var wasPlaying = mediaPlayer.IsPlaying;
         var timeChangedVersionBeforeSeek = Interlocked.Read(ref _timeChangedVersion);
         var safeFrame = Math.Max(0, Math.Min(frame, DurationFrames));
         var milliseconds = (long)Math.Round((safeFrame / FramesPerSecond) * 1000d);
@@ -246,7 +281,7 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
             KeepPlaybackAwake(shouldBrieflyBoostSeek ? 1.0d : _requestedPlaybackRate);
         }
 
-        _mediaPlayer.Time = milliseconds;
+        mediaPlayer.Time = milliseconds;
 
         ResumePlaybackAfterOperation(
             wasPlaying,
@@ -265,7 +300,14 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
 
     public void StepFrameForward() => SeekToFrame(CurrentFrame + 1);
     public void StepFrameBackward() => SeekToFrame(CurrentFrame - 1);
-    public void SetVolume(int volume) => _mediaPlayer.Volume = Math.Clamp(volume, 0, 100);
+    public void SetVolume(int volume)
+    {
+        _volume = Math.Clamp(volume, 0, 100);
+        if (_mediaPlayer is not null)
+        {
+            _mediaPlayer.Volume = _volume;
+        }
+    }
 
     public void Close()
     {
@@ -276,8 +318,12 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
 
         CancelPendingPlaybackResume();
         CancelPendingSeekWake();
-        _mediaPlayer.Stop();
-        _mediaPlayer.Media = null;
+        if (_mediaPlayer is not null)
+        {
+            _mediaPlayer.Stop();
+            _mediaPlayer.Media = null;
+        }
+
         _currentMedia?.Dispose();
         _currentMedia = null;
         _rawVideoWidth = 0;
@@ -291,9 +337,13 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         _requestedVideoZoomCenterY = 0.5d;
         _requestedVideoViewportWidth = 0d;
         _requestedVideoViewportHeight = 0d;
-        _mediaPlayer.CropGeometry = string.Empty;
-        _mediaPlayer.AspectRatio = null;
-        _mediaPlayer.Scale = 0;
+        if (_mediaPlayer is not null)
+        {
+            _mediaPlayer.CropGeometry = string.Empty;
+            _mediaPlayer.AspectRatio = null;
+            _mediaPlayer.Scale = 0;
+        }
+
         CurrentFrame = 0;
         DurationFrames = 1;
         FramesPerSecond = 30d;
@@ -306,10 +356,11 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
     public void SetPlaybackRate(double playbackRate)
     {
         var normalizedRate = Math.Clamp(playbackRate, 0.25d, 2.0d);
-        var wasPlaying = _mediaPlayer.IsPlaying;
+        var mediaPlayer = _mediaPlayer;
+        var wasPlaying = mediaPlayer?.IsPlaying == true;
         CancelPendingSeekWake();
         _requestedPlaybackRate = normalizedRate;
-        _mediaPlayer.SetRate((float)normalizedRate);
+        mediaPlayer?.SetRate((float)normalizedRate);
 
         ResumePlaybackAfterOperation(wasPlaying, forceImmediatePlay: false, forceRetryPlay: false);
 
@@ -340,6 +391,11 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
 
         VideoWidth = sourceWidth;
         VideoHeight = sourceHeight;
+        if (_mediaPlayer is null)
+        {
+            return;
+        }
+
         _mediaPlayer.CropGeometry = string.Empty;
         _mediaPlayer.AspectRatio = null;
         _mediaPlayer.Scale = 0;
@@ -385,7 +441,7 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
 
     private bool TryRefreshVideoSize()
     {
-        if (_disposed)
+        if (_disposed || _mediaPlayer is null)
         {
             return false;
         }
@@ -414,7 +470,14 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         return true;
     }
 
-    public void ToggleMute() => _mediaPlayer.Mute = !_mediaPlayer.Mute;
+    public void ToggleMute()
+    {
+        _isMuted = !IsMuted;
+        if (_mediaPlayer is not null)
+        {
+            _mediaPlayer.Mute = _isMuted;
+        }
+    }
 
     public void SetVideoOutputHandle(IntPtr handle)
     {
@@ -424,7 +487,10 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         }
 
         _preferredVideoHandle = handle;
-        _mediaPlayer.Hwnd = handle;
+        if (_mediaPlayer is not null)
+        {
+            _mediaPlayer.Hwnd = handle;
+        }
     }
 
     public void Dispose()
@@ -435,18 +501,27 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         }
 
         _disposed = true;
-        _mediaPlayer.TimeChanged -= OnTimeChanged;
-        _mediaPlayer.LengthChanged -= OnLengthChanged;
         CancelPendingPlaybackResume();
         CancelPendingSeekWake();
         _currentMedia?.Dispose();
-        _mediaPlayer.Dispose();
-        _libVlc.Dispose();
+        if (_mediaPlayer is not null)
+        {
+            _mediaPlayer.TimeChanged -= OnTimeChanged;
+            _mediaPlayer.LengthChanged -= OnLengthChanged;
+            _mediaPlayer.Playing -= OnPlaying;
+            _mediaPlayer.Paused -= OnPausedOrStopped;
+            _mediaPlayer.Stopped -= OnPausedOrStopped;
+            _mediaPlayer.Dispose();
+            _mediaPlayer = null;
+        }
+
+        _libVlc?.Dispose();
+        _libVlc = null;
     }
 
     private void ResumePlaybackAfterOperation(bool shouldResume, bool forceImmediatePlay, bool forceRetryPlay)
     {
-        if (!shouldResume || _disposed)
+        if (!shouldResume || _disposed || _mediaPlayer is null)
         {
             return;
         }
@@ -509,13 +584,13 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
 
         if (brieflyBoostSeek && !_disposed && !cancellationToken.IsCancellationRequested)
         {
-            _mediaPlayer.SetRate((float)_requestedPlaybackRate);
+            _mediaPlayer?.SetRate((float)_requestedPlaybackRate);
         }
     }
 
     private void KeepPlaybackAwake(double playbackRate)
     {
-        if (_disposed)
+        if (_disposed || _mediaPlayer is null)
         {
             return;
         }
@@ -543,7 +618,7 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
                 return;
             }
 
-            if (!forceRetryPlay && _mediaPlayer.IsPlaying)
+            if (_mediaPlayer is null || !forceRetryPlay && _mediaPlayer.IsPlaying)
             {
                 return;
             }
@@ -596,6 +671,18 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         TryRefreshVideoSize();
         ApplyVideoZoom();
         UpdateDuration(args.Length);
+        PlaybackStateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnPlaying(object? sender, EventArgs args)
+    {
+        TryRefreshVideoSize();
+        ApplyVideoZoom();
+        PlaybackStateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnPausedOrStopped(object? sender, EventArgs args)
+    {
         PlaybackStateChanged?.Invoke(this, EventArgs.Empty);
     }
 

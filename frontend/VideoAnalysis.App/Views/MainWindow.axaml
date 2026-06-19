@@ -4,7 +4,6 @@
         xmlns:items="using:VideoAnalysis.App.ViewModels.Items"
         xmlns:converters="using:VideoAnalysis.App.Converters"
         xmlns:models="using:VideoAnalysis.Core.Models"
-        xmlns:mpv="clr-namespace:HanumanInstitute.LibMpv.Avalonia;assembly=HanumanInstitute.LibMpv.Avalonia"
         x:Class="VideoAnalysis.App.Views.MainWindow"
         x:Name="RootWindow"
         x:DataType="vm:MainWindowViewModel"

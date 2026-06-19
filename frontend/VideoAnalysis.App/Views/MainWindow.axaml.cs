@@ -846,14 +846,20 @@ public partial class MainWindow : Window
         QueueBroadcastRendererInitialization();
     }
 
-    private Task OpenBroadcastLiveStreamAsync(string source, string metadataPath, CancellationToken cancellationToken)
+    private async Task OpenBroadcastLiveStreamAsync(string source, string metadataPath, CancellationToken cancellationToken)
     {
-        return _broadcastPlaybackService switch
+        switch (_broadcastPlaybackService)
         {
-            MpvMediaPlaybackService mpvPlaybackService => mpvPlaybackService.OpenLiveStreamAsync(source, metadataPath, cancellationToken),
-            LibVlcMediaPlaybackService libVlcPlaybackService => libVlcPlaybackService.OpenLiveStreamAsync(source, metadataPath, cancellationToken),
-            _ => throw new InvalidOperationException("Broadcast playback service does not support live streams.")
-        };
+            case MpvMediaPlaybackService mpvPlaybackService:
+                await mpvPlaybackService.OpenLiveStreamAsync(source, metadataPath, cancellationToken);
+                break;
+            case LibVlcMediaPlaybackService libVlcPlaybackService:
+                await libVlcPlaybackService.OpenLiveStreamAsync(source, metadataPath, cancellationToken);
+                BindManagedVideoViews();
+                break;
+            default:
+                throw new InvalidOperationException("Broadcast playback service does not support live streams.");
+        }
     }
 
     private bool DropBroadcastLiveBuffers()
@@ -3366,6 +3372,12 @@ public partial class MainWindow : Window
         {
             UpdateSeekBarVisuals();
             ResetTimelineScrollIfNeeded();
+            return;
+        }
+
+        if (e.PropertyName is nameof(MainWindowViewModel.MediaPlayer) or nameof(MainWindowViewModel.PlaybackVideoPath))
+        {
+            BindManagedVideoViews();
             return;
         }
 

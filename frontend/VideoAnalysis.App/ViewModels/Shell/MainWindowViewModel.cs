@@ -459,6 +459,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanExportFromDialog));
     }
 
+    partial void OnPlaybackVideoPathChanged(string value)
+    {
+        OnPropertyChanged(nameof(MediaPlayer));
+    }
+
     partial void OnIsLiveSourceChanged(bool value)
     {
         OnPropertyChanged(nameof(DurationTimeText));
