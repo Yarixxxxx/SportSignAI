@@ -551,6 +551,7 @@
       <Setter Property="CornerRadius" Value="12"/>
       <Setter Property="Margin" Value="28"/>
       <Setter Property="MaxWidth" Value="900"/>
+      <Setter Property="ClipToBounds" Value="True"/>
     </Style>
 
     <Style Selector="TextBlock.dialog-title">
@@ -3451,8 +3452,8 @@
             VerticalAlignment="Stretch">
         <Border Classes="new-project-dialog"
                 HorizontalAlignment="Center"
-                VerticalAlignment="Center">
-          <Grid RowDefinitions="Auto,Auto"
+                VerticalAlignment="Stretch">
+          <Grid RowDefinitions="Auto,*"
                 Width="860"
                 MaxWidth="860">
             <Border Background="#2F2F32"
@@ -3480,9 +3481,12 @@
             <Border Grid.Row="1"
                     Background="#2F2F32"
                     CornerRadius="0,0,12,12"
-                    Padding="24">
+                    Padding="0">
+              <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                            VerticalScrollBarVisibility="Auto">
               <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
-                    RowSpacing="22">
+                    RowSpacing="22"
+                    Margin="24">
                 <StackPanel Spacing="10">
                   <TextBlock Classes="form-label"
                              Text="Название проекта *"/>
@@ -3742,6 +3746,7 @@
                   </Grid>
                 </Grid>
               </Grid>
+              </ScrollViewer>
             </Border>
           </Grid>
         </Border>
