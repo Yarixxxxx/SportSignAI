@@ -58,6 +58,23 @@ public partial class SplashWindow : Window
         await Task.Delay(220);
     }
 
+    public void SetStatus(string status)
+    {
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            SplashStatusText.Text = status;
+        }
+    }
+
+    public void ShowFailure(string message)
+    {
+        _imageTimer.Stop();
+        _progressTimer.Stop();
+        _progress = Math.Max(_progress, 94);
+        UpdateProgress();
+        SplashStatusText.Text = message;
+    }
+
     private Image SplashHeroImage => this.FindControl<Image>(nameof(SplashHeroImage))
         ?? throw new InvalidOperationException("SplashHeroImage was not found.");
 

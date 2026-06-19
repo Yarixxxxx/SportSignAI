@@ -45,24 +45,45 @@ public partial class App : Application
         IClassicDesktopStyleApplicationLifetime desktop,
         SplashWindow splashWindow)
     {
-        await Task.Delay(2_200);
-
-        if (_serviceProvider is null)
+        try
         {
+            await Task.Delay(2_200);
+
+            if (_serviceProvider is null)
+            {
+                splashWindow.Close();
+                return;
+            }
+
+            splashWindow.SetStatus("Проверяем системные компоненты...");
+            if (!MpvRuntimeProbe.IsAvailable(out var runtimeError))
+            {
+                var message = $"{runtimeError} Логи: {AppLogService.LogsDirectory}";
+                AppLogService.Error(message, "Startup");
+                splashWindow.ShowFailure(message);
+                return;
+            }
+
+            splashWindow.SetStatus("Открываем главное окно...");
+            AppLogService.Info("Creating main window.", "Startup");
+
+            var mainWindow = new MainWindow
+            {
+                DataContext = _serviceProvider.GetRequiredService<MainWindowViewModel>(),
+                WindowState = WindowState.Maximized
+            };
+
+            desktop.MainWindow = mainWindow;
+            mainWindow.Show();
+            AppLogService.Info("Main window shown.", "Startup");
+            await splashWindow.CompleteAsync();
             splashWindow.Close();
-            return;
         }
-
-        var mainWindow = new MainWindow
+        catch (Exception ex)
         {
-            DataContext = _serviceProvider.GetRequiredService<MainWindowViewModel>(),
-            WindowState = WindowState.Maximized
-        };
-
-        desktop.MainWindow = mainWindow;
-        mainWindow.Show();
-        await splashWindow.CompleteAsync();
-        splashWindow.Close();
+            AppLogService.Fatal(ex, "Show main window failed");
+            splashWindow.ShowFailure($"Не удалось открыть приложение. Логи: {AppLogService.LogsDirectory}");
+        }
     }
 
     private static ServiceProvider ConfigureServices()

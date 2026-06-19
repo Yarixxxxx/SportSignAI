@@ -31,9 +31,14 @@ internal sealed class Program
 
     public static AppBuilder BuildAvaloniaApp()
     {
-        return AppBuilder.Configure<App>()
+        var builder = AppBuilder.Configure<App>()
             .UsePlatformDetect()
-            .With(new Win32PlatformOptions
+            .LogToTrace()
+            .UseReactiveUI();
+
+        if (OperatingSystem.IsWindows())
+        {
+            builder = builder.With(new Win32PlatformOptions
             {
                 RenderingMode =
                 [
@@ -41,8 +46,9 @@ internal sealed class Program
                     Win32RenderingMode.Wgl,
                     Win32RenderingMode.Software
                 ]
-            })
-            .LogToTrace()
-            .UseReactiveUI();
+            });
+        }
+
+        return builder;
     }
 }

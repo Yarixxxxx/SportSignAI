@@ -68,7 +68,8 @@
           <TextBlock x:Name="SplashStatusText"
                      Text="Загружаем модули анализа..."
                      Foreground="#8FA3BF"
-                     FontSize="13"/>
+                     FontSize="13"
+                     TextWrapping="Wrap"/>
         </StackPanel>
       </Grid>
     </Grid>
