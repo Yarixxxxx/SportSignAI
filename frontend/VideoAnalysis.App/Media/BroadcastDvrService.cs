@@ -773,25 +773,109 @@ public sealed class BroadcastDvrService : IDisposable
 
     private string ResolveFfmpegPath()
     {
+        var probeErrors = new List<string>();
+        var seenCandidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         if (Path.IsPathRooted(_ffmpegPath))
         {
-            if (File.Exists(_ffmpegPath))
+            if (TryUseFfmpegCandidate(_ffmpegPath, seenCandidates, probeErrors, out var rootedCandidate))
             {
-                return _ffmpegPath;
+                return rootedCandidate;
             }
 
-            throw new InvalidOperationException($"FFmpeg was not found at '{_ffmpegPath}'.");
+            if (!File.Exists(_ffmpegPath))
+            {
+                probeErrors.Add($"FFmpeg was not found at '{_ffmpegPath}'.");
+            }
         }
 
         foreach (var candidate in EnumerateFfmpegCandidates(_ffmpegPath))
         {
-            if (File.Exists(candidate))
+            if (TryUseFfmpegCandidate(candidate, seenCandidates, probeErrors, out var resolvedCandidate))
             {
-                return candidate;
+                return resolvedCandidate;
             }
         }
 
-        return _ffmpegPath;
+        var details = probeErrors.Count == 0
+            ? $"FFmpeg was not found. Current value: '{_ffmpegPath}'."
+            : string.Join(Environment.NewLine, probeErrors);
+        throw new InvalidOperationException($"No usable FFmpeg executable was found.{Environment.NewLine}{details}");
+    }
+
+    private static bool TryUseFfmpegCandidate(
+        string candidate,
+        ISet<string> seenCandidates,
+        ICollection<string> probeErrors,
+        out string resolvedCandidate)
+    {
+        resolvedCandidate = string.Empty;
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            return false;
+        }
+
+        var fullPath = Path.GetFullPath(candidate);
+        if (!seenCandidates.Add(fullPath) || !File.Exists(fullPath))
+        {
+            return false;
+        }
+
+        if (IsUsableFfmpeg(fullPath, out var error))
+        {
+            resolvedCandidate = fullPath;
+            return true;
+        }
+
+        probeErrors.Add($"FFmpeg at '{fullPath}' is not usable: {error}");
+        return false;
+    }
+
+    private static bool IsUsableFfmpeg(string ffmpegPath, out string error)
+    {
+        error = string.Empty;
+        try
+        {
+            using var process = Process.Start(new ProcessStartInfo
+            {
+                FileName = ffmpegPath,
+                Arguments = "-hide_banner -version",
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true
+            });
+
+            if (process is null)
+            {
+                error = "process did not start.";
+                return false;
+            }
+
+            if (!process.WaitForExit(2_000))
+            {
+                process.Kill(entireProcessTree: true);
+                error = "version probe timed out.";
+                return false;
+            }
+
+            if (process.ExitCode == 0)
+            {
+                return true;
+            }
+
+            var output = $"{process.StandardError.ReadToEnd()}{process.StandardOutput.ReadToEnd()}".Trim();
+            error = string.IsNullOrWhiteSpace(output)
+                ? $"version probe exited with code {process.ExitCode}."
+                : output.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()
+                  ?? $"version probe exited with code {process.ExitCode}.";
+            return false;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
     }
 
     private static IEnumerable<string> EnumerateFfmpegCandidates(string configuredPath)
@@ -809,7 +893,9 @@ public sealed class BroadcastDvrService : IDisposable
             executableName,
             Path.Combine("tools", executableName),
             Path.Combine("tools", "ffmpeg", executableName),
-            Path.Combine("tools", "ffmpeg", "bin", executableName)
+            Path.Combine("tools", "ffmpeg", "bin", executableName),
+            Path.Combine("tools", "ffmpeg", "macos-arm64", "unpacked", executableName),
+            Path.Combine("tools", "ffmpeg", "macos-x64", "unpacked", executableName)
         })
         {
             yield return Path.Combine(AppContext.BaseDirectory, candidateName);

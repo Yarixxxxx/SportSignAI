@@ -28,6 +28,15 @@ if [[ "${RUNTIME_IDENTIFIER}" != "osx-arm64" && "${RUNTIME_IDENTIFIER}" != "osx-
   exit 1
 fi
 
+case "${RUNTIME_IDENTIFIER}" in
+  osx-arm64)
+    BUNDLED_FFMPEG_SOURCE="${REPO_ROOT}/tools/ffmpeg/macos-arm64/unpacked/ffmpeg"
+    ;;
+  osx-x64)
+    BUNDLED_FFMPEG_SOURCE="${REPO_ROOT}/tools/ffmpeg/macos-x64/unpacked/ffmpeg"
+    ;;
+esac
+
 echo "Publishing ${PROJECT_PATH} (${CONFIGURATION}, ${RUNTIME_IDENTIFIER})..."
 rm -rf "${PUBLISH_DIR}"
 dotnet publish "${PROJECT_PATH}" -c "${CONFIGURATION}" -r "${RUNTIME_IDENTIFIER}" --self-contained true
@@ -51,8 +60,21 @@ cp -R "${PUBLISH_DIR}/." "${MACOS_DIR}/"
 
 chmod +x "${MACOS_DIR}/${APP_EXECUTABLE}"
 
-if [[ -f "${MACOS_DIR}/ffmpeg" ]]; then
-  chmod +x "${MACOS_DIR}/ffmpeg"
+if [[ ! -f "${MACOS_DIR}/ffmpeg" ]]; then
+  if [[ ! -f "${BUNDLED_FFMPEG_SOURCE}" ]]; then
+    echo "Bundled ffmpeg source not found: ${BUNDLED_FFMPEG_SOURCE}" >&2
+    exit 1
+  fi
+
+  echo "Copying bundled ffmpeg into app bundle..."
+  cp "${BUNDLED_FFMPEG_SOURCE}" "${MACOS_DIR}/ffmpeg"
+fi
+
+chmod +x "${MACOS_DIR}/ffmpeg"
+if ! "${MACOS_DIR}/ffmpeg" -hide_banner -version >/dev/null 2>&1; then
+  echo "Bundled ffmpeg exists but cannot be executed: ${MACOS_DIR}/ffmpeg" >&2
+  echo "Run it manually on the Mac to inspect missing dylib dependencies." >&2
+  exit 1
 fi
 
 if [[ ! -f "${INFO_TEMPLATE}" ]]; then
