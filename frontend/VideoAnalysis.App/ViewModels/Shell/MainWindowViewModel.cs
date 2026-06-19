@@ -13,7 +13,9 @@ using VideoAnalysis.Core.Dtos;
 using VideoAnalysis.Core.Enums;
 using VideoAnalysis.Core.Models;
 using VideoAnalysis.Infrastructure.Media;
+#if WINDOWS_MPV
 using MpvContext = HanumanInstitute.LibMpv.MpvContext;
+#endif
 
 namespace VideoAnalysis.App.ViewModels.Shell;
 
@@ -3621,6 +3623,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+#if WINDOWS_MPV
     public void AttachMpvContext(MpvContext mpvContext)
     {
         if (_mediaPlaybackService is MpvMediaPlaybackService service)
@@ -3628,6 +3631,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             service.AttachMpvContext(mpvContext);
         }
     }
+#endif
 
     public void RefreshPlaybackUiState()
     {

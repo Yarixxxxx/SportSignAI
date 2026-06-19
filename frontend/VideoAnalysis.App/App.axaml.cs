@@ -22,19 +22,26 @@ public partial class App : Application
 
     public override void Initialize()
     {
+        AppLogService.Info("Loading application XAML.", "Startup");
         AvaloniaXamlLoader.Load(this);
+        AppLogService.Info("Application XAML loaded.", "Startup");
     }
 
     public override void OnFrameworkInitializationCompleted()
     {
+        AppLogService.Info("Framework initialization completed.", "Startup");
         AppLogService.InstallUiExceptionHandler();
+        AppLogService.Info("Configuring application services.", "Startup");
         _serviceProvider = ConfigureServices();
+        AppLogService.Info("Application services configured.", "Startup");
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            AppLogService.Info("Creating splash window.", "Startup");
             var splashWindow = new SplashWindow();
             desktop.MainWindow = splashWindow;
             splashWindow.Show();
+            AppLogService.Info("Splash window shown.", "Startup");
             _ = ShowMainWindowAsync(desktop, splashWindow);
         }
 
@@ -47,7 +54,9 @@ public partial class App : Application
     {
         try
         {
+            AppLogService.Info("Startup transition delay started.", "Startup");
             await Task.Delay(2_200);
+            AppLogService.Info("Startup transition delay completed.", "Startup");
 
             if (_serviceProvider is null)
             {
@@ -69,11 +78,16 @@ public partial class App : Application
 
             var mainWindow = new MainWindow
             {
-                DataContext = _serviceProvider.GetRequiredService<MainWindowViewModel>(),
                 WindowState = WindowState.Maximized
             };
+            AppLogService.Info("Main window shell created.", "Startup");
+
+            AppLogService.Info("Resolving main window view model.", "Startup");
+            mainWindow.DataContext = _serviceProvider.GetRequiredService<MainWindowViewModel>();
+            AppLogService.Info("Main window view model assigned.", "Startup");
 
             desktop.MainWindow = mainWindow;
+            AppLogService.Info("Showing main window.", "Startup");
             mainWindow.Show();
             AppLogService.Info("Main window shown.", "Startup");
             await splashWindow.CompleteAsync();
@@ -110,14 +124,11 @@ public partial class App : Application
         services.AddSingleton<ITagService, TagService>();
         services.AddSingleton<IEventCaptureService, EventCaptureService>();
         services.AddSingleton<IPlaylistService, PlaylistService>();
-        if (OperatingSystem.IsWindows())
-        {
-            services.AddSingleton<IMediaPlaybackService, MpvMediaPlaybackService>();
-        }
-        else
-        {
-            services.AddSingleton<IMediaPlaybackService, LibVlcMediaPlaybackService>();
-        }
+#if WINDOWS_MPV
+        services.AddSingleton<IMediaPlaybackService, MpvMediaPlaybackService>();
+#else
+        services.AddSingleton<IMediaPlaybackService, LibVlcMediaPlaybackService>();
+#endif
         services.AddSingleton<IVideoProxyService>(_ => new FfmpegVideoProxyService(settings.FfmpegPath));
         services.AddSingleton<IClipComposerService>(_ => new FfmpegClipComposerService(settings.FfmpegPath));
         services.AddSingleton<IAnnotationRenderService, AnnotationRenderService>();

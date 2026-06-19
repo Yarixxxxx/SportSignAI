@@ -23,51 +23,13 @@ INFO_TEMPLATE="${PROJECT_DIR}/macos/Info.plist.template"
 INFO_PLIST="${CONTENTS_DIR}/Info.plist"
 ZIP_PATH="${DIST_ROOT}/VideoAnalysis-macos-${RUNTIME_IDENTIFIER}.zip"
 
-find_system_libmpv() {
-  if [[ -n "${LIBMPV_DYLIB_PATH:-}" && -f "${LIBMPV_DYLIB_PATH}" ]]; then
-    echo "${LIBMPV_DYLIB_PATH}"
-    return 0
-  fi
-
-  local candidates=(
-    "/opt/homebrew/lib/libmpv.2.dylib"
-    "/opt/homebrew/lib/libmpv.dylib"
-    "/opt/homebrew/opt/mpv/lib/libmpv.2.dylib"
-    "/opt/homebrew/opt/mpv/lib/libmpv.dylib"
-    "/usr/local/lib/libmpv.2.dylib"
-    "/usr/local/lib/libmpv.dylib"
-    "/usr/local/opt/mpv/lib/libmpv.2.dylib"
-    "/usr/local/opt/mpv/lib/libmpv.dylib"
-  )
-
-  if command -v brew >/dev/null 2>&1; then
-    local brew_prefix
-    brew_prefix="$(brew --prefix mpv 2>/dev/null || true)"
-    if [[ -n "${brew_prefix}" ]]; then
-      candidates+=(
-        "${brew_prefix}/lib/libmpv.2.dylib"
-        "${brew_prefix}/lib/libmpv.dylib"
-      )
-    fi
-  fi
-
-  local candidate
-  for candidate in "${candidates[@]}"; do
-    if [[ -f "${candidate}" ]]; then
-      echo "${candidate}"
-      return 0
-    fi
-  done
-
-  return 1
-}
-
 if [[ "${RUNTIME_IDENTIFIER}" != "osx-arm64" && "${RUNTIME_IDENTIFIER}" != "osx-x64" ]]; then
   echo "Unsupported runtime identifier '${RUNTIME_IDENTIFIER}'. Expected osx-arm64 or osx-x64." >&2
   exit 1
 fi
 
 echo "Publishing ${PROJECT_PATH} (${CONFIGURATION}, ${RUNTIME_IDENTIFIER})..."
+rm -rf "${PUBLISH_DIR}"
 dotnet publish "${PROJECT_PATH}" -c "${CONFIGURATION}" -r "${RUNTIME_IDENTIFIER}" --self-contained true
 
 if [[ ! -d "${PUBLISH_DIR}" ]]; then
@@ -117,20 +79,7 @@ else
   echo "The app bundle was created, but video playback may not work on macOS until LibVLC runtime is included." >&2
 fi
 
-if find "${MACOS_DIR}" -maxdepth 3 -name 'libmpv*.dylib' | grep -q .; then
-  echo "libmpv runtime files detected in publish output."
-else
-  echo "Warning: libmpv runtime files were not detected in ${PUBLISH_DIR}." >&2
-  if system_libmpv="$(find_system_libmpv)"; then
-    echo "libmpv exists on this Mac at ${system_libmpv}, but it is not bundled into the app." >&2
-    echo "The packaged app will only launch on Macs where mpv/libmpv is installed system-wide." >&2
-    echo "To run locally, install it with: brew install mpv" >&2
-  else
-    echo "No system libmpv was found on this Mac either." >&2
-    echo "The app is expected to stop on the splash screen before the main window unless mpv is installed." >&2
-    echo "Install it with: brew install mpv" >&2
-  fi
-fi
+echo "mpv runtime is not required for macOS builds; playback uses LibVLC on this platform."
 
 rm -f "${ZIP_PATH}"
 if command -v ditto >/dev/null 2>&1; then

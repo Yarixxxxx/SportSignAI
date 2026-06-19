@@ -10,7 +10,6 @@ using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using HanumanInstitute.LibMpv.Avalonia;
 using LibVLCSharp.Avalonia;
 using System.Diagnostics;
 using System.ComponentModel;
@@ -22,7 +21,10 @@ using VideoAnalysis.App.ViewModels.Shell;
 using VideoAnalysis.Core.Abstractions;
 using VideoAnalysis.Core.Models;
 using VideoAnalysis.Infrastructure.Media;
+#if WINDOWS_MPV
+using HanumanInstitute.LibMpv.Avalonia;
 using MpvContext = HanumanInstitute.LibMpv.MpvContext;
+#endif
 
 namespace VideoAnalysis.App.Views;
 
@@ -164,7 +166,9 @@ public partial class MainWindow : Window
     private Border? _playerSurfaceHost;
     private Grid? _playerSurfaceLayer;
     private Grid? _playerVideoPresenter;
+#if WINDOWS_MPV
     private MpvView? _playerView;
+#endif
     private VideoView? _playerLibVlcView;
     private Button? _playerDetachButton;
     private Border? _videoZoomDiagnosticsOverlay;
@@ -181,7 +185,9 @@ public partial class MainWindow : Window
     private Ellipse? _timelineZoomSliderThumb;
     private Border? _volumePopupRoot;
     private Grid? _broadcastVideoPresenter;
+#if WINDOWS_MPV
     private MpvView? _broadcastView;
+#endif
     private VideoView? _broadcastLibVlcView;
     private readonly IMediaPlaybackService _broadcastPlaybackService;
     private bool _isSynchronizingMenus;
@@ -190,15 +196,17 @@ public partial class MainWindow : Window
     private bool _isTimelineZoomSliderDragging;
     private bool _isVideoPanDragging;
     private bool _isVideoZoomDiagnosticsVisible;
+#if WINDOWS_MPV
     private bool _isPlayerRendererInitialized;
     private bool _isPlayerRendererInitializationQueued;
     private int _playerRendererAttachAttempts;
     private bool _isBroadcastRendererInitialized;
     private bool _isBroadcastRendererInitializationQueued;
+    private int _broadcastRendererAttachAttempts;
+#endif
     private bool _isBroadcastLiveStarted;
     private bool _isBroadcastManuallyStopped;
     private bool _isRecoveringBroadcastLivePreview;
-    private int _broadcastRendererAttachAttempts;
     private int _broadcastLiveRecoveryVersion;
     private bool _broadcastLiveRecoveryForceRefresh;
     private long _broadcastLiveHealthFrame;
@@ -429,17 +437,27 @@ public partial class MainWindow : Window
         AvaloniaXamlLoader.Load(this);
     }
 
-    private static bool UseMpvEmbeddedPlayback => OperatingSystem.IsWindows();
+    private static bool UseMpvEmbeddedPlayback =>
+#if WINDOWS_MPV
+        OperatingSystem.IsWindows();
+#else
+        false;
+#endif
 
     private static IMediaPlaybackService CreateBroadcastPlaybackService()
     {
+#if WINDOWS_MPV
         return UseMpvEmbeddedPlayback
             ? new MpvMediaPlaybackService()
             : new LibVlcMediaPlaybackService();
+#else
+        return new LibVlcMediaPlaybackService();
+#endif
     }
 
     private void InitializePlaybackViews()
     {
+#if WINDOWS_MPV
         if (UseMpvEmbeddedPlayback)
         {
             var playerView = CreateMpvView("PlayerView", OnPlayerViewInitialized);
@@ -455,6 +473,7 @@ public partial class MainWindow : Window
             _broadcastView = broadcastView;
             return;
         }
+#endif
 
         _playerLibVlcView = CreateLibVlcView();
         PlayerVideoPresenter.Children.Insert(0, _playerLibVlcView);
@@ -463,6 +482,7 @@ public partial class MainWindow : Window
         BroadcastVideoPresenter.Children.Insert(0, _broadcastLibVlcView);
     }
 
+#if WINDOWS_MPV
     private MpvView CreateMpvView(string name, EventHandler initializedHandler)
     {
         var view = new MpvView
@@ -481,6 +501,7 @@ public partial class MainWindow : Window
         view.ViewInitialized += initializedHandler;
         return view;
     }
+#endif
 
     private static VideoView CreateLibVlcView()
     {
@@ -569,10 +590,12 @@ public partial class MainWindow : Window
 
         var isVisible = !_isPlayerPanelHidden;
         PlayerSurfaceHost.IsVisible = isVisible;
+#if WINDOWS_MPV
         if (_playerView is not null)
         {
             _playerView.IsVisible = isVisible;
         }
+#endif
 
         if (_playerLibVlcView is not null)
         {
@@ -587,6 +610,7 @@ public partial class MainWindow : Window
         UpdateVideoZoomLayout();
     }
 
+#if WINDOWS_MPV
     private void QueuePlayerRendererInitialization(bool waitForRender = false)
     {
         if (!UseMpvEmbeddedPlayback || _playerView is null)
@@ -845,14 +869,25 @@ public partial class MainWindow : Window
     {
         QueueBroadcastRendererInitialization();
     }
+#else
+    private void QueuePlayerRendererInitialization(bool waitForRender = false)
+    {
+    }
+
+    private void QueueBroadcastRendererInitialization(bool waitForRender = false)
+    {
+    }
+#endif
 
     private async Task OpenBroadcastLiveStreamAsync(string source, string metadataPath, CancellationToken cancellationToken)
     {
         switch (_broadcastPlaybackService)
         {
+#if WINDOWS_MPV
             case MpvMediaPlaybackService mpvPlaybackService:
                 await mpvPlaybackService.OpenLiveStreamAsync(source, metadataPath, cancellationToken);
                 break;
+#endif
             case LibVlcMediaPlaybackService libVlcPlaybackService:
                 await libVlcPlaybackService.OpenLiveStreamAsync(source, metadataPath, cancellationToken);
                 BindManagedVideoViews();
@@ -864,8 +899,12 @@ public partial class MainWindow : Window
 
     private bool DropBroadcastLiveBuffers()
     {
+#if WINDOWS_MPV
         return _broadcastPlaybackService is MpvMediaPlaybackService mpvPlaybackService
             && mpvPlaybackService.DropLiveBuffers();
+#else
+        return false;
+#endif
     }
 
     private async Task EnsureBroadcastLiveAsync()
@@ -1101,6 +1140,7 @@ public partial class MainWindow : Window
         BroadcastStatusText.Text = manualStop ? "Трансляция остановлена" : "Ожидание камеры";
     }
 
+#if WINDOWS_MPV
     private static void ConfigureEmbeddedMpvRenderer(MpvContext mpvContext)
     {
         SetMpvOptionString(mpvContext, "config", "no");
@@ -1121,6 +1161,7 @@ public partial class MainWindow : Window
         {
         }
     }
+#endif
 
     private void TryBindEmbeddedVideoOutput()
     {
@@ -1512,6 +1553,7 @@ public partial class MainWindow : Window
 
     private void RecreatePlayerRendererAfterTopLevelChange()
     {
+#if WINDOWS_MPV
         if (!UseMpvEmbeddedPlayback || _playerView is null)
         {
             BindManagedVideoViews();
@@ -1537,8 +1579,12 @@ public partial class MainWindow : Window
                 QueuePlayerRendererInitialization(waitForRender: true);
             },
             DispatcherPriority.Loaded);
+#else
+        BindManagedVideoViews();
+#endif
     }
 
+#if WINDOWS_MPV
     private void ReplacePlayerViewForCurrentTopLevel()
     {
         if (_playerView is null)
@@ -1567,6 +1613,7 @@ public partial class MainWindow : Window
         layer.Children.Insert(insertIndex, nextView);
         _playerView = nextView;
     }
+#endif
 
     private void OnDetachedPlayerWindowClosing(object? sender, WindowClosingEventArgs e)
     {
@@ -2535,6 +2582,7 @@ public partial class MainWindow : Window
             return;
         }
 
+#if WINDOWS_MPV
         if (_playerView is not null)
         {
             _playerView.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
@@ -2543,6 +2591,7 @@ public partial class MainWindow : Window
             _playerView.Height = double.NaN;
             _playerView.Margin = default;
         }
+#endif
 
         if (_playerLibVlcView is not null)
         {

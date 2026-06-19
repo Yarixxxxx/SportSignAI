@@ -82,13 +82,6 @@ After packaging:
 
 - `.NET SDK 10`
 - standard macOS build tools
-- `mpv` installed via Homebrew when `libmpv` is not already bundled into the publish output
-
-Example:
-
-```bash
-brew install mpv
-```
 
 The end user does not need those prerequisites.
 
@@ -101,12 +94,4 @@ The packaging script warns if LibVLC native files are not present in publish out
 
 That warning is the main go/no-go signal during the first macOS packaging pass.
 
-Playback also depends on `libmpv` at startup. If `libmpv` is missing on the target Mac, the app may reach about `94%` on the splash screen and stop before the main window is shown.
-
-The current startup guard now checks `libmpv` before the main window is created and should show an explicit failure message with the logs path instead of hanging silently.
-
-If you are running the app locally on a Mac and it stops at `94%`, install:
-
-```bash
-brew install mpv
-```
+mpv/libmpv is not required on macOS. The macOS build uses LibVLC playback and excludes the mpv-specific playback service from the app binary.

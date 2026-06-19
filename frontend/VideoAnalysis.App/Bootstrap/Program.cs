@@ -19,6 +19,7 @@ internal sealed class Program
 
         try
         {
+            AppLogService.Info("Building Avalonia app.", "Startup");
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
             AppLogService.Info("Application process exited.");
         }
@@ -31,6 +32,7 @@ internal sealed class Program
 
     public static AppBuilder BuildAvaloniaApp()
     {
+        AppLogService.Info("Configuring Avalonia platform.", "Startup");
         var builder = AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .LogToTrace()
@@ -49,6 +51,7 @@ internal sealed class Program
             });
         }
 
+        AppLogService.Info("Avalonia app builder configured.", "Startup");
         return builder;
     }
 }
