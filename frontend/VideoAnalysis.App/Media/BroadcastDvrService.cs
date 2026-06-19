@@ -748,9 +748,16 @@ public sealed class BroadcastDvrService : IDisposable
 
     private static string ResolveCameraName(string? cameraName)
     {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            return string.IsNullOrWhiteSpace(cameraName)
+                ? "0"
+                : cameraName.Trim();
+        }
+
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            throw new InvalidOperationException("Broadcast DVR from camera is currently available on Windows only.");
+            throw new InvalidOperationException("Broadcast DVR from camera is currently available on Windows and macOS only.");
         }
 
         var resolvedCameraName = string.IsNullOrWhiteSpace(cameraName)
@@ -849,16 +856,14 @@ public sealed class BroadcastDvrService : IDisposable
         var previewForceKeyFrames = $"expr:gte(t,n_forced*{ToInvariant(PreviewKeyFrameSeconds)})";
         var segmentGop = (int)Math.Round(FallbackFramesPerSecond * SegmentSeconds);
         var previewGop = Math.Max(1, (int)Math.Round(FallbackFramesPerSecond * PreviewKeyFrameSeconds));
+        var cameraInputArguments = BuildCameraInputArguments(cameraName);
 
         return string.Join(' ',
             "-y",
             "-fflags nobuffer",
             "-probesize 32",
             "-analyzeduration 0",
-            "-f dshow",
-            "-rtbufsize 32M",
-            "-thread_queue_size 32",
-            $"-i {Quote($"video={cameraName}")}",
+            cameraInputArguments,
             "-map 0:v:0",
             "-an",
             "-c:v libx264",
@@ -898,6 +903,25 @@ public sealed class BroadcastDvrService : IDisposable
             "-mpegts_flags +resend_headers",
             "-f mpegts",
             Quote(previewTarget));
+    }
+
+    private static string BuildCameraInputArguments(string cameraName)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            var avFoundationSource = $"{cameraName}:none";
+            return string.Join(' ',
+                "-f avfoundation",
+                $"-framerate {ToInvariant(FallbackFramesPerSecond)}",
+                "-thread_queue_size 32",
+                $"-i {Quote(avFoundationSource)}");
+        }
+
+        return string.Join(' ',
+            "-f dshow",
+            "-rtbufsize 32M",
+            "-thread_queue_size 32",
+            $"-i {Quote($"video={cameraName}")}");
     }
 
     private static int FindAvailableUdpPort()
