@@ -1350,11 +1350,9 @@
                   ClipToBounds="True"
                   SizeChanged="OnPlayerSurfaceSizeChanged">
             <Grid x:Name="PlayerSurfaceLayer">
-              <mpv:MpvView x:Name="PlayerView"
-                            Renderer="OpenGl"
-                            HorizontalAlignment="Stretch"
-                            VerticalAlignment="Stretch"
-                            PointerWheelChanged="OnPlayerSurfacePointerWheelChanged"/>
+              <Grid x:Name="PlayerVideoPresenter"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"/>
 
               <Border Background="Transparent"
                       HorizontalAlignment="Stretch"
@@ -2877,10 +2875,9 @@
                   ClipToBounds="True"
                   SizeChanged="OnBroadcastSurfaceSizeChanged">
             <Grid>
-              <mpv:MpvView x:Name="BroadcastView"
-                            Renderer="OpenGl"
-                            HorizontalAlignment="Stretch"
-                            VerticalAlignment="Stretch"/>
+              <Grid x:Name="BroadcastVideoPresenter"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"/>
 
               <Border HorizontalAlignment="Left"
                       VerticalAlignment="Top"

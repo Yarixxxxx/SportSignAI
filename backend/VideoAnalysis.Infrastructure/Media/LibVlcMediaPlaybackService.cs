@@ -162,6 +162,52 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         throw new NotSupportedException("Live camera capture is supported by the mpv playback service.");
     }
 
+    public Task<MediaMetadata> OpenLiveStreamAsync(string source, string metadataPath, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(source))
+        {
+            throw new ArgumentException("Live stream source is required.", nameof(source));
+        }
+
+        _currentMedia?.Dispose();
+        _rawVideoWidth = 0;
+        _rawVideoHeight = 0;
+        _sampleAspectRatio = 1d;
+        _sourceVideoWidth = 0;
+        _sourceVideoHeight = 0;
+        VideoWidth = 0;
+        VideoHeight = 0;
+        _requestedVideoZoom = 1.0d;
+        _requestedVideoZoomCenterX = 0.5d;
+        _requestedVideoZoomCenterY = 0.5d;
+        _requestedVideoViewportWidth = 0d;
+        _requestedVideoViewportHeight = 0d;
+        _mediaPlayer.CropGeometry = string.Empty;
+        _mediaPlayer.AspectRatio = null;
+        _mediaPlayer.Scale = 0;
+
+        var uri = Uri.TryCreate(source, UriKind.Absolute, out var parsedUri)
+            ? parsedUri
+            : throw new InvalidOperationException($"Live stream source is invalid: {source}");
+
+        _currentMedia = new LibVLCSharp.Shared.Media(_libVlc, uri);
+        var media = _currentMedia;
+        foreach (var option in LowLatencyMediaOptions)
+        {
+            media.AddOption(option);
+        }
+
+        media.Parse(MediaParseOptions.ParseNetwork);
+        _mediaPlayer.Media = media;
+        CurrentFrame = 0;
+        DurationFrames = 1;
+        TryRefreshVideoSize();
+        ApplyVideoZoom();
+
+        return Task.FromResult(new MediaMetadata(metadataPath, FramesPerSecond, DurationFrames, VideoWidth, VideoHeight));
+    }
+
     public void Play()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&

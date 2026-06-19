@@ -11,6 +11,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using HanumanInstitute.LibMpv.Avalonia;
+using LibVLCSharp.Avalonia;
 using System.Diagnostics;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
@@ -18,7 +19,9 @@ using VideoAnalysis.App.Media;
 using VideoAnalysis.App.Services;
 using VideoAnalysis.App.ViewModels.Items;
 using VideoAnalysis.App.ViewModels.Shell;
+using VideoAnalysis.Core.Abstractions;
 using VideoAnalysis.Core.Models;
+using VideoAnalysis.Infrastructure.Media;
 using MpvContext = HanumanInstitute.LibMpv.MpvContext;
 
 namespace VideoAnalysis.App.Views;
@@ -62,6 +65,8 @@ public partial class MainWindow : Window
         ?? throw new InvalidOperationException("PlayerSurfaceHost was not found.");
     private Grid PlayerSurfaceLayer => _playerSurfaceLayer ??= this.FindControl<Grid>(nameof(PlayerSurfaceLayer))
         ?? throw new InvalidOperationException("PlayerSurfaceLayer was not found.");
+    private Grid PlayerVideoPresenter => _playerVideoPresenter ??= this.FindControl<Grid>(nameof(PlayerVideoPresenter))
+        ?? throw new InvalidOperationException("PlayerVideoPresenter was not found.");
     private Border EventsPanel => this.FindControl<Border>(nameof(EventsPanel))
         ?? throw new InvalidOperationException("EventsPanel was not found.");
     private GridSplitter EventsPanelSplitter => this.FindControl<GridSplitter>(nameof(EventsPanelSplitter))
@@ -78,8 +83,8 @@ public partial class MainWindow : Window
         ?? throw new InvalidOperationException("BroadcastPanel was not found.");
     private Border BroadcastSurfaceHost => this.FindControl<Border>(nameof(BroadcastSurfaceHost))
         ?? throw new InvalidOperationException("BroadcastSurfaceHost was not found.");
-    private MpvView BroadcastView => _broadcastView ??= this.FindControl<MpvView>(nameof(BroadcastView))
-        ?? throw new InvalidOperationException("BroadcastView was not found.");
+    private Grid BroadcastVideoPresenter => _broadcastVideoPresenter ??= this.FindControl<Grid>(nameof(BroadcastVideoPresenter))
+        ?? throw new InvalidOperationException("BroadcastVideoPresenter was not found.");
     private TextBlock BroadcastStatusText => this.FindControl<TextBlock>(nameof(BroadcastStatusText))
         ?? throw new InvalidOperationException("BroadcastStatusText was not found.");
     private Border TimelinePanel => this.FindControl<Border>(nameof(TimelinePanel))
@@ -112,8 +117,6 @@ public partial class MainWindow : Window
     private RowDefinition TopContentRow => MainLayoutGrid.RowDefinitions[0];
     private RowDefinition TimelineSplitterRow => MainLayoutGrid.RowDefinitions[1];
     private RowDefinition TimelineRow => MainLayoutGrid.RowDefinitions[2];
-    private MpvView PlayerView => _playerView ??= this.FindControl<MpvView>(nameof(PlayerView))
-        ?? throw new InvalidOperationException("PlayerView was not found.");
     private Button PlayerDetachButton => _playerDetachButton ??= this.FindControl<Button>(nameof(PlayerDetachButton))
         ?? throw new InvalidOperationException("PlayerDetachButton was not found.");
     private Border VideoZoomDiagnosticsOverlay => _videoZoomDiagnosticsOverlay ??= this.FindControl<Border>(nameof(VideoZoomDiagnosticsOverlay))
@@ -160,7 +163,9 @@ public partial class MainWindow : Window
     private MainWindowViewModel? _viewModel;
     private Border? _playerSurfaceHost;
     private Grid? _playerSurfaceLayer;
+    private Grid? _playerVideoPresenter;
     private MpvView? _playerView;
+    private VideoView? _playerLibVlcView;
     private Button? _playerDetachButton;
     private Border? _videoZoomDiagnosticsOverlay;
     private TextBlock? _videoZoomDiagnosticsText;
@@ -175,8 +180,10 @@ public partial class MainWindow : Window
     private Border? _timelineZoomSliderProgress;
     private Ellipse? _timelineZoomSliderThumb;
     private Border? _volumePopupRoot;
+    private Grid? _broadcastVideoPresenter;
     private MpvView? _broadcastView;
-    private readonly MpvMediaPlaybackService _broadcastPlaybackService = new();
+    private VideoView? _broadcastLibVlcView;
+    private readonly IMediaPlaybackService _broadcastPlaybackService;
     private bool _isSynchronizingMenus;
     private bool _isSeekDragging;
     private bool _isVolumeDragging;
@@ -374,6 +381,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _broadcastPlaybackService = CreateBroadcastPlaybackService();
+        InitializePlaybackViews();
         _broadcastLiveEdgeTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
             Interval = TimeSpan.FromMilliseconds(250)
@@ -412,23 +421,87 @@ public partial class MainWindow : Window
             OnPlayerSurfacePointerWheelChanged,
             RoutingStrategies.Tunnel | RoutingStrategies.Bubble,
             handledEventsToo: true);
-        PlayerView.AddHandler(
-            InputElement.PointerWheelChangedEvent,
-            OnPlayerSurfacePointerWheelChanged,
-            RoutingStrategies.Tunnel | RoutingStrategies.Bubble,
-            handledEventsToo: true);
-        PlayerView.ViewInitialized += OnPlayerViewInitialized;
-        _playerContextSubscription = PlayerView.GetObservable(MpvView.MpvContextProperty)
-            .Subscribe(_ => QueuePlayerRendererInitialization());
-        BroadcastView.ViewInitialized += OnBroadcastViewInitialized;
-        _broadcastContextSubscription = BroadcastView.GetObservable(MpvView.MpvContextProperty)
-            .Subscribe(_ => QueueBroadcastRendererInitialization());
         UpdatePlayerDetachButtonState();
     }
 
     private void InitializeComponent()
     {
         AvaloniaXamlLoader.Load(this);
+    }
+
+    private static bool UseMpvEmbeddedPlayback => OperatingSystem.IsWindows();
+
+    private static IMediaPlaybackService CreateBroadcastPlaybackService()
+    {
+        return UseMpvEmbeddedPlayback
+            ? new MpvMediaPlaybackService()
+            : new LibVlcMediaPlaybackService();
+    }
+
+    private void InitializePlaybackViews()
+    {
+        if (UseMpvEmbeddedPlayback)
+        {
+            var playerView = CreateMpvView("PlayerView", OnPlayerViewInitialized);
+            _playerContextSubscription = playerView.GetObservable(MpvView.MpvContextProperty)
+                .Subscribe(_ => QueuePlayerRendererInitialization());
+            PlayerVideoPresenter.Children.Insert(0, playerView);
+            _playerView = playerView;
+
+            var broadcastView = CreateMpvView("BroadcastView", OnBroadcastViewInitialized);
+            _broadcastContextSubscription = broadcastView.GetObservable(MpvView.MpvContextProperty)
+                .Subscribe(_ => QueueBroadcastRendererInitialization());
+            BroadcastVideoPresenter.Children.Insert(0, broadcastView);
+            _broadcastView = broadcastView;
+            return;
+        }
+
+        _playerLibVlcView = CreateLibVlcView();
+        PlayerVideoPresenter.Children.Insert(0, _playerLibVlcView);
+
+        _broadcastLibVlcView = CreateLibVlcView();
+        BroadcastVideoPresenter.Children.Insert(0, _broadcastLibVlcView);
+    }
+
+    private MpvView CreateMpvView(string name, EventHandler initializedHandler)
+    {
+        var view = new MpvView
+        {
+            Name = name,
+            Renderer = VideoRenderer.OpenGl,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch
+        };
+
+        view.AddHandler(
+            InputElement.PointerWheelChangedEvent,
+            OnPlayerSurfacePointerWheelChanged,
+            RoutingStrategies.Tunnel | RoutingStrategies.Bubble,
+            handledEventsToo: true);
+        view.ViewInitialized += initializedHandler;
+        return view;
+    }
+
+    private static VideoView CreateLibVlcView()
+    {
+        return new VideoView
+        {
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch
+        };
+    }
+
+    private void BindManagedVideoViews()
+    {
+        if (_playerLibVlcView is not null)
+        {
+            _playerLibVlcView.MediaPlayer = _viewModel?.MediaPlayer;
+        }
+
+        if (_broadcastLibVlcView is not null)
+        {
+            _broadcastLibVlcView.MediaPlayer = (_broadcastPlaybackService as LibVlcMediaPlaybackService)?.MediaPlayer;
+        }
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
@@ -439,6 +512,7 @@ public partial class MainWindow : Window
         }
 
         _viewModel = DataContext as MainWindowViewModel;
+        BindManagedVideoViews();
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
@@ -495,7 +569,15 @@ public partial class MainWindow : Window
 
         var isVisible = !_isPlayerPanelHidden;
         PlayerSurfaceHost.IsVisible = isVisible;
-        PlayerView.IsVisible = isVisible;
+        if (_playerView is not null)
+        {
+            _playerView.IsVisible = isVisible;
+        }
+
+        if (_playerLibVlcView is not null)
+        {
+            _playerLibVlcView.IsVisible = isVisible;
+        }
 
         if (!isVisible)
         {
@@ -507,6 +589,11 @@ public partial class MainWindow : Window
 
     private void QueuePlayerRendererInitialization(bool waitForRender = false)
     {
+        if (!UseMpvEmbeddedPlayback || _playerView is null)
+        {
+            return;
+        }
+
         if (_isPlayerRendererInitialized || _isPlayerRendererInitializationQueued)
         {
             return;
@@ -534,6 +621,11 @@ public partial class MainWindow : Window
 
     private void EnsurePlayerRendererInitialized()
     {
+        if (!UseMpvEmbeddedPlayback || _playerView is null)
+        {
+            return;
+        }
+
         if (_isPlayerRendererInitialized)
         {
             AttachPlayerMpvContext();
@@ -542,7 +634,8 @@ public partial class MainWindow : Window
 
         try
         {
-            if (!PlayerView.IsAttachedToVisualTree()
+            var playerView = _playerView!;
+            if (!playerView.IsAttachedToVisualTree()
                 || PlayerSurfaceHost.Bounds.Width <= 1
                 || PlayerSurfaceHost.Bounds.Height <= 1)
             {
@@ -550,13 +643,13 @@ public partial class MainWindow : Window
                 return;
             }
 
-            var mpvContext = PlayerView.MpvContext;
+            var mpvContext = playerView.MpvContext;
             if (mpvContext is null)
             {
                 if (_playerRendererAttachAttempts++ >= 2)
                 {
-                    PlayerView.InitRenderer();
-                    mpvContext = PlayerView.MpvContext;
+                    playerView.InitRenderer();
+                    mpvContext = playerView.MpvContext;
                 }
                 else
                 {
@@ -615,7 +708,7 @@ public partial class MainWindow : Window
     {
         if (!_isPlayerRendererInitialized
             || _viewModel is null
-            || PlayerView.MpvContext is not { } mpvContext)
+            || _playerView?.MpvContext is not { } mpvContext)
         {
             return;
         }
@@ -630,6 +723,11 @@ public partial class MainWindow : Window
 
     private void QueueBroadcastRendererInitialization(bool waitForRender = false)
     {
+        if (!UseMpvEmbeddedPlayback || _broadcastView is null)
+        {
+            return;
+        }
+
         if (_isBroadcastRendererInitialized || _isBroadcastRendererInitializationQueued)
         {
             return;
@@ -657,6 +755,11 @@ public partial class MainWindow : Window
 
     private void EnsureBroadcastRendererInitialized()
     {
+        if (!UseMpvEmbeddedPlayback || _broadcastView is null)
+        {
+            return;
+        }
+
         if (_isBroadcastRendererInitialized)
         {
             AttachBroadcastMpvContext();
@@ -665,7 +768,8 @@ public partial class MainWindow : Window
 
         try
         {
-            if (!BroadcastView.IsAttachedToVisualTree()
+            var broadcastView = _broadcastView!;
+            if (!broadcastView.IsAttachedToVisualTree()
                 || BroadcastSurfaceHost.Bounds.Width <= 1
                 || BroadcastSurfaceHost.Bounds.Height <= 1)
             {
@@ -673,13 +777,13 @@ public partial class MainWindow : Window
                 return;
             }
 
-            var mpvContext = BroadcastView.MpvContext;
+            var mpvContext = broadcastView.MpvContext;
             if (mpvContext is null)
             {
                 if (_broadcastRendererAttachAttempts++ >= 2)
                 {
-                    BroadcastView.InitRenderer();
-                    mpvContext = BroadcastView.MpvContext;
+                    broadcastView.InitRenderer();
+                    mpvContext = broadcastView.MpvContext;
                 }
                 else
                 {
@@ -724,18 +828,38 @@ public partial class MainWindow : Window
     private void AttachBroadcastMpvContext()
     {
         if (!_isBroadcastRendererInitialized
-            || BroadcastView.MpvContext is not { } mpvContext)
+            || _broadcastView?.MpvContext is not { } mpvContext)
         {
             return;
         }
 
-        _broadcastPlaybackService.AttachMpvContext(mpvContext);
+        if (_broadcastPlaybackService is MpvMediaPlaybackService mpvPlaybackService)
+        {
+            mpvPlaybackService.AttachMpvContext(mpvContext);
+        }
+
         _ = EnsureBroadcastDisplayAsync();
     }
 
     private void OnBroadcastViewInitialized(object? sender, EventArgs e)
     {
         QueueBroadcastRendererInitialization();
+    }
+
+    private Task OpenBroadcastLiveStreamAsync(string source, string metadataPath, CancellationToken cancellationToken)
+    {
+        return _broadcastPlaybackService switch
+        {
+            MpvMediaPlaybackService mpvPlaybackService => mpvPlaybackService.OpenLiveStreamAsync(source, metadataPath, cancellationToken),
+            LibVlcMediaPlaybackService libVlcPlaybackService => libVlcPlaybackService.OpenLiveStreamAsync(source, metadataPath, cancellationToken),
+            _ => throw new InvalidOperationException("Broadcast playback service does not support live streams.")
+        };
+    }
+
+    private bool DropBroadcastLiveBuffers()
+    {
+        return _broadcastPlaybackService is MpvMediaPlaybackService mpvPlaybackService
+            && mpvPlaybackService.DropLiveBuffers();
     }
 
     private async Task EnsureBroadcastLiveAsync()
@@ -753,7 +877,7 @@ public partial class MainWindow : Window
         {
             BroadcastStatusText.Text = "Запускаем live-DVR...";
             var previewSource = await _viewModel.EnsureBroadcastDvrAsync(CancellationToken.None);
-            await _broadcastPlaybackService.OpenLiveStreamAsync(
+            await OpenBroadcastLiveStreamAsync(
                 previewSource,
                 "dvr://broadcast",
                 CancellationToken.None);
@@ -907,7 +1031,7 @@ public partial class MainWindow : Window
         var previewSource = _viewModel.BroadcastDvrPreviewSource;
         try
         {
-            if (_broadcastPlaybackService.DropLiveBuffers())
+            if (DropBroadcastLiveBuffers())
             {
                 _broadcastPlaybackService.Play();
                 _isBroadcastLiveStarted = true;
@@ -919,7 +1043,7 @@ public partial class MainWindow : Window
             BroadcastStatusText.Text = "Обновляем LIVE...";
             _broadcastPlaybackService.Close();
             _isBroadcastLiveStarted = false;
-            await _broadcastPlaybackService.OpenLiveStreamAsync(
+            await OpenBroadcastLiveStreamAsync(
                 previewSource,
                 "dvr://broadcast",
                 CancellationToken.None);
@@ -1043,7 +1167,10 @@ public partial class MainWindow : Window
         _playerContextSubscription = null;
         _broadcastContextSubscription?.Dispose();
         _broadcastContextSubscription = null;
-        _broadcastPlaybackService.Dispose();
+        if (_broadcastPlaybackService is IDisposable disposableBroadcastPlayback)
+        {
+            disposableBroadcastPlayback.Dispose();
+        }
         UnhookWindowInput();
         UnhookVideoWheel();
     }
@@ -1379,6 +1506,12 @@ public partial class MainWindow : Window
 
     private void RecreatePlayerRendererAfterTopLevelChange()
     {
+        if (!UseMpvEmbeddedPlayback || _playerView is null)
+        {
+            BindManagedVideoViews();
+            return;
+        }
+
         _isPlayerRendererInitialized = false;
         _isPlayerRendererInitializationQueued = false;
         _playerRendererAttachAttempts = 0;
@@ -1402,7 +1535,12 @@ public partial class MainWindow : Window
 
     private void ReplacePlayerViewForCurrentTopLevel()
     {
-        var oldView = PlayerView;
+        if (_playerView is null)
+        {
+            return;
+        }
+
+        var oldView = _playerView;
         var layer = PlayerSurfaceLayer;
         var insertIndex = layer.Children.IndexOf(oldView);
         if (insertIndex < 0)
@@ -1416,20 +1554,7 @@ public partial class MainWindow : Window
         oldView.RemoveHandler(InputElement.PointerWheelChangedEvent, OnPlayerSurfacePointerWheelChanged);
         layer.Children.Remove(oldView);
 
-        var nextView = new MpvView
-        {
-            Name = nameof(PlayerView),
-            Renderer = VideoRenderer.OpenGl,
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch
-        };
-
-        nextView.AddHandler(
-            InputElement.PointerWheelChangedEvent,
-            OnPlayerSurfacePointerWheelChanged,
-            RoutingStrategies.Tunnel | RoutingStrategies.Bubble,
-            handledEventsToo: true);
-        nextView.ViewInitialized += OnPlayerViewInitialized;
+        var nextView = CreateMpvView("PlayerView", OnPlayerViewInitialized);
         _playerContextSubscription = nextView.GetObservable(MpvView.MpvContextProperty)
             .Subscribe(_ => QueuePlayerRendererInitialization());
 
@@ -2404,11 +2529,23 @@ public partial class MainWindow : Window
             return;
         }
 
-        PlayerView.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
-        PlayerView.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
-        PlayerView.Width = double.NaN;
-        PlayerView.Height = double.NaN;
-        PlayerView.Margin = default;
+        if (_playerView is not null)
+        {
+            _playerView.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+            _playerView.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
+            _playerView.Width = double.NaN;
+            _playerView.Height = double.NaN;
+            _playerView.Margin = default;
+        }
+
+        if (_playerLibVlcView is not null)
+        {
+            _playerLibVlcView.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+            _playerLibVlcView.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
+            _playerLibVlcView.Width = double.NaN;
+            _playerLibVlcView.Height = double.NaN;
+            _playerLibVlcView.Margin = default;
+        }
 
         UpdateVideoZoomDiagnostics(displayRect);
     }

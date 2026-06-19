@@ -56,7 +56,7 @@ public partial class App : Application
             }
 
             splashWindow.SetStatus("Проверяем системные компоненты...");
-            if (!MpvRuntimeProbe.IsAvailable(out var runtimeError))
+            if (OperatingSystem.IsWindows() && !MpvRuntimeProbe.IsAvailable(out var runtimeError))
             {
                 var message = $"{runtimeError} Логи: {AppLogService.LogsDirectory}";
                 AppLogService.Error(message, "Startup");
@@ -110,7 +110,14 @@ public partial class App : Application
         services.AddSingleton<ITagService, TagService>();
         services.AddSingleton<IEventCaptureService, EventCaptureService>();
         services.AddSingleton<IPlaylistService, PlaylistService>();
-        services.AddSingleton<IMediaPlaybackService, MpvMediaPlaybackService>();
+        if (OperatingSystem.IsWindows())
+        {
+            services.AddSingleton<IMediaPlaybackService, MpvMediaPlaybackService>();
+        }
+        else
+        {
+            services.AddSingleton<IMediaPlaybackService, LibVlcMediaPlaybackService>();
+        }
         services.AddSingleton<IVideoProxyService>(_ => new FfmpegVideoProxyService(settings.FfmpegPath));
         services.AddSingleton<IClipComposerService>(_ => new FfmpegClipComposerService(settings.FfmpegPath));
         services.AddSingleton<IAnnotationRenderService, AnnotationRenderService>();
