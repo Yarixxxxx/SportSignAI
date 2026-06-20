@@ -157,6 +157,7 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
 
     private static IEnumerable<string> EnumerateLibVlcCandidateDirectories(string baseDirectory, string architectureRuntime)
     {
+        yield return Path.Combine(baseDirectory, "lib");
         yield return baseDirectory;
         yield return Path.Combine(baseDirectory, "libvlc");
         yield return Path.Combine(baseDirectory, "libvlc", architectureRuntime);

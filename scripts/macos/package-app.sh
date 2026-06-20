@@ -18,6 +18,7 @@ PUBLISH_DIR="${PROJECT_DIR}/bin/${CONFIGURATION}/${FRAMEWORK}/${RUNTIME_IDENTIFI
 BUNDLE_DIR="${DIST_ROOT}/VideoAnalysis.app"
 CONTENTS_DIR="${BUNDLE_DIR}/Contents"
 MACOS_DIR="${CONTENTS_DIR}/MacOS"
+MACOS_LIB_DIR="${MACOS_DIR}/lib"
 RESOURCES_DIR="${CONTENTS_DIR}/Resources"
 INFO_TEMPLATE="${PROJECT_DIR}/macos/Info.plist.template"
 INFO_PLIST="${CONTENTS_DIR}/Info.plist"
@@ -70,7 +71,7 @@ find_libvlc_runtime_dir() {
 }
 
 copy_libvlc_runtime() {
-  if [[ -f "${MACOS_DIR}/libvlc.dylib" && -f "${MACOS_DIR}/libvlccore.dylib" ]]; then
+  if [[ -f "${MACOS_LIB_DIR}/libvlc.dylib" && -f "${MACOS_LIB_DIR}/libvlccore.dylib" ]]; then
     return 0
   fi
 
@@ -86,18 +87,20 @@ copy_libvlc_runtime() {
     exit 1
   fi
 
-  cp -R "${runtime_dir}/." "${MACOS_DIR}/"
+  rm -rf "${MACOS_LIB_DIR}"
+  mkdir -p "${MACOS_LIB_DIR}"
+  cp -R "${runtime_dir}/." "${MACOS_LIB_DIR}/"
 
-  if [[ ! -d "${MACOS_DIR}/plugins" ]]; then
+  if [[ ! -d "${MACOS_LIB_DIR}/plugins" ]]; then
     if [[ -d "${runtime_dir}/plugins" ]]; then
-      cp -R "${runtime_dir}/plugins" "${MACOS_DIR}/plugins"
+      cp -R "${runtime_dir}/plugins" "${MACOS_LIB_DIR}/plugins"
     elif [[ -d "$(dirname "${runtime_dir}")/plugins" ]]; then
-      cp -R "$(dirname "${runtime_dir}")/plugins" "${MACOS_DIR}/plugins"
+      cp -R "$(dirname "${runtime_dir}")/plugins" "${MACOS_LIB_DIR}/plugins"
     fi
   fi
 
-  if [[ ! -f "${MACOS_DIR}/libvlc.dylib" || ! -f "${MACOS_DIR}/libvlccore.dylib" ]]; then
-    echo "LibVLC runtime copy failed: ${MACOS_DIR}/libvlc.dylib or libvlccore.dylib is missing." >&2
+  if [[ ! -f "${MACOS_LIB_DIR}/libvlc.dylib" || ! -f "${MACOS_LIB_DIR}/libvlccore.dylib" ]]; then
+    echo "LibVLC runtime copy failed: ${MACOS_LIB_DIR}/libvlc.dylib or libvlccore.dylib is missing." >&2
     exit 1
   fi
 }
@@ -118,7 +121,7 @@ fi
 
 mkdir -p "${DIST_ROOT}"
 rm -rf "${BUNDLE_DIR}"
-mkdir -p "${MACOS_DIR}" "${RESOURCES_DIR}"
+mkdir -p "${MACOS_DIR}" "${MACOS_LIB_DIR}" "${RESOURCES_DIR}"
 
 echo "Copying publish output into app bundle..."
 cp -R "${PUBLISH_DIR}/." "${MACOS_DIR}/"
@@ -161,8 +164,8 @@ fi
 
 copy_libvlc_runtime
 
-if find "${MACOS_DIR}" -maxdepth 3 \( -name 'libvlc*.dylib' -o -name 'libvlc*.framework' \) | grep -q .; then
-  echo "LibVLC runtime files detected in app bundle."
+if [[ -f "${MACOS_LIB_DIR}/libvlc.dylib" && -f "${MACOS_LIB_DIR}/libvlccore.dylib" ]]; then
+  echo "LibVLC runtime files detected in app bundle: ${MACOS_LIB_DIR}"
 else
   echo "LibVLC runtime files were not detected in app bundle." >&2
   exit 1
