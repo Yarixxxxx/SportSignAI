@@ -90,8 +90,17 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
             return _mediaPlayer;
         }
 
-        LibVLCSharp.Shared.Core.Initialize();
-        _libVlc = new LibVLC(LowLatencyLibVlcOptions);
+        var libVlcDirectory = ResolveLibVlcDirectory();
+        if (string.IsNullOrWhiteSpace(libVlcDirectory))
+        {
+            LibVLCSharp.Shared.Core.Initialize();
+        }
+        else
+        {
+            LibVLCSharp.Shared.Core.Initialize(libVlcDirectory);
+        }
+
+        _libVlc = new LibVLC(BuildLibVlcOptions(libVlcDirectory));
         _mediaPlayer = new MediaPlayer(_libVlc)
         {
             Volume = _volume,
@@ -110,6 +119,65 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         _mediaPlayer.Stopped += OnPausedOrStopped;
 
         return _mediaPlayer;
+    }
+
+    private static string[] BuildLibVlcOptions(string? libVlcDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(libVlcDirectory))
+        {
+            return LowLatencyLibVlcOptions;
+        }
+
+        var pluginsDirectory = Path.Combine(libVlcDirectory, "plugins");
+        if (!Directory.Exists(pluginsDirectory))
+        {
+            return LowLatencyLibVlcOptions;
+        }
+
+        return [.. LowLatencyLibVlcOptions, $"--plugin-path={pluginsDirectory}"];
+    }
+
+    private static string? ResolveLibVlcDirectory()
+    {
+        var baseDirectory = AppContext.BaseDirectory;
+        var architectureRuntime = RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+            ? "osx-arm64"
+            : "osx-x64";
+
+        foreach (var directory in EnumerateLibVlcCandidateDirectories(baseDirectory, architectureRuntime))
+        {
+            if (ContainsLibVlc(directory))
+            {
+                return directory;
+            }
+        }
+
+        return null;
+    }
+
+    private static IEnumerable<string> EnumerateLibVlcCandidateDirectories(string baseDirectory, string architectureRuntime)
+    {
+        yield return baseDirectory;
+        yield return Path.Combine(baseDirectory, "libvlc");
+        yield return Path.Combine(baseDirectory, "libvlc", architectureRuntime);
+        yield return Path.Combine(baseDirectory, "runtimes", architectureRuntime, "native");
+        yield return Path.Combine(baseDirectory, "runtimes", architectureRuntime);
+        yield return Path.Combine(baseDirectory, "libvlc", "macos");
+        yield return Path.Combine(baseDirectory, "libvlc", "macos-arm64");
+        yield return Path.Combine(baseDirectory, "libvlc", "macos-x64");
+    }
+
+    private static bool ContainsLibVlc(string directory)
+    {
+        if (!Directory.Exists(directory))
+        {
+            return false;
+        }
+
+        var libraryName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? "libvlc.dll"
+            : "libvlc.dylib";
+        return File.Exists(Path.Combine(directory, libraryName));
     }
 
     public Task<MediaMetadata> OpenAsync(string filePath, CancellationToken cancellationToken)

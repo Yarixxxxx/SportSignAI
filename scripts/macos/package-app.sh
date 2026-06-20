@@ -37,6 +37,71 @@ case "${RUNTIME_IDENTIFIER}" in
     ;;
 esac
 
+NUGET_PACKAGES_DIR="${NUGET_PACKAGES:-${HOME}/.nuget/packages}"
+LIBVLC_MAC_PACKAGE_DIR="${NUGET_PACKAGES_DIR}/videolan.libvlc.mac"
+
+find_libvlc_runtime_dir() {
+  local search_root="$1"
+  if [[ ! -d "${search_root}" ]]; then
+    return 1
+  fi
+
+  local libvlc_path
+  local preferred_paths=()
+  local fallback_paths=()
+  while IFS= read -r libvlc_path; do
+    if [[ "${libvlc_path}" == *"${RUNTIME_IDENTIFIER}"* ]]; then
+      preferred_paths+=("${libvlc_path}")
+    else
+      fallback_paths+=("${libvlc_path}")
+    fi
+  done < <(find "${search_root}" -type f -name 'libvlc.dylib' 2>/dev/null)
+
+  for libvlc_path in "${preferred_paths[@]}" "${fallback_paths[@]}"; do
+    local runtime_dir
+    runtime_dir="$(dirname "${libvlc_path}")"
+    if [[ -f "${runtime_dir}/libvlccore.dylib" ]]; then
+      echo "${runtime_dir}"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+copy_libvlc_runtime() {
+  if [[ -f "${MACOS_DIR}/libvlc.dylib" && -f "${MACOS_DIR}/libvlccore.dylib" ]]; then
+    return 0
+  fi
+
+  local runtime_dir=""
+  if runtime_dir="$(find_libvlc_runtime_dir "${PUBLISH_DIR}")"; then
+    echo "Copying LibVLC runtime from publish output: ${runtime_dir}"
+  elif runtime_dir="$(find_libvlc_runtime_dir "${LIBVLC_MAC_PACKAGE_DIR}")"; then
+    echo "Copying LibVLC runtime from NuGet cache: ${runtime_dir}"
+  else
+    echo "Unable to locate libvlc.dylib/libvlccore.dylib." >&2
+    echo "Expected them in publish output or NuGet package: ${LIBVLC_MAC_PACKAGE_DIR}" >&2
+    echo "Try running: dotnet restore \"${PROJECT_PATH}\" -r ${RUNTIME_IDENTIFIER}" >&2
+    exit 1
+  fi
+
+  cp -R "${runtime_dir}/." "${MACOS_DIR}/"
+
+  if [[ ! -d "${MACOS_DIR}/plugins" ]]; then
+    if [[ -d "${runtime_dir}/plugins" ]]; then
+      cp -R "${runtime_dir}/plugins" "${MACOS_DIR}/plugins"
+    elif [[ -d "$(dirname "${runtime_dir}")/plugins" ]]; then
+      cp -R "$(dirname "${runtime_dir}")/plugins" "${MACOS_DIR}/plugins"
+    fi
+  fi
+
+  if [[ ! -f "${MACOS_DIR}/libvlc.dylib" || ! -f "${MACOS_DIR}/libvlccore.dylib" ]]; then
+    echo "LibVLC runtime copy failed: ${MACOS_DIR}/libvlc.dylib or libvlccore.dylib is missing." >&2
+    exit 1
+  fi
+}
+
 echo "Publishing ${PROJECT_PATH} (${CONFIGURATION}, ${RUNTIME_IDENTIFIER})..."
 rm -rf "${PUBLISH_DIR}"
 dotnet publish "${PROJECT_PATH}" -c "${CONFIGURATION}" -r "${RUNTIME_IDENTIFIER}" --self-contained true
@@ -94,11 +159,13 @@ if [[ -f "${PROJECT_DIR}/Assets/app-icon.png" ]]; then
   cp "${PROJECT_DIR}/Assets/app-icon.png" "${RESOURCES_DIR}/"
 fi
 
+copy_libvlc_runtime
+
 if find "${MACOS_DIR}" -maxdepth 3 \( -name 'libvlc*.dylib' -o -name 'libvlc*.framework' \) | grep -q .; then
-  echo "LibVLC runtime files detected in publish output."
+  echo "LibVLC runtime files detected in app bundle."
 else
-  echo "Warning: LibVLC runtime files were not detected in ${PUBLISH_DIR}." >&2
-  echo "The app bundle was created, but video playback may not work on macOS until LibVLC runtime is included." >&2
+  echo "LibVLC runtime files were not detected in app bundle." >&2
+  exit 1
 fi
 
 echo "mpv runtime is not required for macOS builds; playback uses LibVLC on this platform."
