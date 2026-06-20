@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using VideoAnalysis.App.Services;
 using VideoAnalysis.Core.Dtos;
 
 namespace VideoAnalysis.App.Media;
@@ -144,9 +145,10 @@ public sealed class BroadcastDvrService : IDisposable
         var segmentPattern = Path.Combine(segmentFolderPath, "segment-%06d.ts");
         var segmentStartNumber = GetNextSegmentIndex(segmentFolderPath);
 
+        var ffmpegPath = ResolveFfmpegPath();
         var startInfo = new ProcessStartInfo
         {
-            FileName = ResolveFfmpegPath(),
+            FileName = ffmpegPath,
             Arguments = BuildDvrArguments(resolvedCameraName, segmentPattern, segmentStartNumber, previewPort),
             CreateNoWindow = true,
             UseShellExecute = false,
@@ -164,7 +166,7 @@ public sealed class BroadcastDvrService : IDisposable
         if (_process.HasExited)
         {
             var details = await ReadProcessOutputAsync().ConfigureAwait(false);
-            throw new InvalidOperationException($"ffmpeg live DVR exited immediately. {details}");
+            throw new InvalidOperationException($"ffmpeg live DVR exited immediately. FFmpeg: {ffmpegPath}. {details}");
         }
 
         await SaveIndexAsync(cancellationToken).ConfigureAwait(false);
@@ -776,10 +778,20 @@ public sealed class BroadcastDvrService : IDisposable
         var probeErrors = new List<string>();
         var seenCandidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+        foreach (var candidate in EnumerateBundledFfmpegCandidates())
+        {
+            if (TryUseFfmpegCandidate(candidate, seenCandidates, probeErrors, out var bundledCandidate))
+            {
+                AppLogService.Info($"Using bundled FFmpeg for live-DVR: {bundledCandidate}", "BroadcastDvr");
+                return bundledCandidate;
+            }
+        }
+
         if (Path.IsPathRooted(_ffmpegPath))
         {
             if (TryUseFfmpegCandidate(_ffmpegPath, seenCandidates, probeErrors, out var rootedCandidate))
             {
+                AppLogService.Info($"Using configured FFmpeg for live-DVR: {rootedCandidate}", "BroadcastDvr");
                 return rootedCandidate;
             }
 
@@ -793,6 +805,7 @@ public sealed class BroadcastDvrService : IDisposable
         {
             if (TryUseFfmpegCandidate(candidate, seenCandidates, probeErrors, out var resolvedCandidate))
             {
+                AppLogService.Info($"Using discovered FFmpeg for live-DVR: {resolvedCandidate}", "BroadcastDvr");
                 return resolvedCandidate;
             }
         }
@@ -800,6 +813,7 @@ public sealed class BroadcastDvrService : IDisposable
         var details = probeErrors.Count == 0
             ? $"FFmpeg was not found. Current value: '{_ffmpegPath}'."
             : string.Join(Environment.NewLine, probeErrors);
+        AppLogService.Error($"No usable FFmpeg executable was found.{Environment.NewLine}{details}", "BroadcastDvr");
         throw new InvalidOperationException($"No usable FFmpeg executable was found.{Environment.NewLine}{details}");
     }
 
@@ -911,6 +925,25 @@ public sealed class BroadcastDvrService : IDisposable
         foreach (var pathEntry in pathEnv.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             yield return Path.Combine(pathEntry, executableName);
+        }
+    }
+
+    private static IEnumerable<string> EnumerateBundledFfmpegCandidates()
+    {
+        var executableName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "ffmpeg.exe" : "ffmpeg";
+        var candidateNames = new[]
+        {
+            executableName,
+            Path.Combine("tools", executableName),
+            Path.Combine("tools", "ffmpeg", executableName),
+            Path.Combine("tools", "ffmpeg", "bin", executableName),
+            Path.Combine("tools", "ffmpeg", "macos-arm64", "unpacked", executableName),
+            Path.Combine("tools", "ffmpeg", "macos-x64", "unpacked", executableName)
+        };
+
+        foreach (var candidateName in candidateNames)
+        {
+            yield return Path.Combine(AppContext.BaseDirectory, candidateName);
         }
     }
 
