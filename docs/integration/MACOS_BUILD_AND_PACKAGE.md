@@ -93,6 +93,7 @@ The packaged app must contain both files:
 
 - `dist/macos/VideoAnalysis.app/Contents/MacOS/lib/libvlc.dylib`
 - `dist/macos/VideoAnalysis.app/Contents/MacOS/lib/libvlccore.dylib`
+- `dist/macos/VideoAnalysis.app/Contents/MacOS/libvlc.dylib` as a compatibility loader path
 
 The packaging script exits with an error if either file is missing. It checks:
 

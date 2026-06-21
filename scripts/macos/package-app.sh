@@ -126,8 +126,25 @@ copy_plugins_directory() {
   fi
 }
 
+copy_libvlc_compatibility_layouts() {
+  local runtime_identifier="$1"
+  local legacy_runtime_lib_dir="${MACOS_DIR}/libvlc/${runtime_identifier}/lib"
+  local libvlccore_path="${MACOS_LIB_DIR}/libvlccore.dylib"
+
+  if [[ ! -f "${libvlccore_path}" && -f "${MACOS_LIB_DIR}/lib/libvlccore.dylib" ]]; then
+    cp -f -L "${MACOS_LIB_DIR}/lib/libvlccore.dylib" "${libvlccore_path}"
+  fi
+
+  mkdir -p "${legacy_runtime_lib_dir}"
+
+  cp -f -L "${MACOS_LIB_DIR}/libvlc.dylib" "${MACOS_DIR}/libvlc.dylib"
+  cp -f -L "${MACOS_LIB_DIR}/libvlc.dylib" "${legacy_runtime_lib_dir}/libvlc.dylib"
+  cp -f -L "${libvlccore_path}" "${legacy_runtime_lib_dir}/libvlccore.dylib"
+}
+
 copy_libvlc_runtime() {
   if has_libvlc_runtime "${MACOS_LIB_DIR}"; then
+    copy_libvlc_compatibility_layouts "${RUNTIME_IDENTIFIER}"
     return 0
   fi
 
@@ -154,6 +171,8 @@ copy_libvlc_runtime() {
     echo "LibVLC runtime copy failed: ${MACOS_LIB_DIR}/libvlc.dylib or libvlccore.dylib is missing." >&2
     exit 1
   fi
+
+  copy_libvlc_compatibility_layouts "${RUNTIME_IDENTIFIER}"
 }
 
 echo "Publishing ${PROJECT_PATH} (${CONFIGURATION}, ${RUNTIME_IDENTIFIER})..."
@@ -177,6 +196,7 @@ mkdir -p "${MACOS_DIR}" "${MACOS_LIB_DIR}" "${RESOURCES_DIR}"
 echo "Copying publish output into app bundle..."
 cp -R "${PUBLISH_DIR}/." "${MACOS_DIR}/"
 rm -f "${MACOS_DIR}/libvlc.dylib" "${MACOS_DIR}/libvlccore.dylib"
+rm -rf "${MACOS_DIR}/libvlc"
 
 chmod +x "${MACOS_DIR}/${APP_EXECUTABLE}"
 
@@ -218,6 +238,7 @@ copy_libvlc_runtime
 
 if has_libvlc_runtime "${MACOS_LIB_DIR}"; then
   echo "LibVLC runtime files detected in app bundle: ${MACOS_LIB_DIR}"
+  echo "LibVLC compatibility loader path: ${MACOS_DIR}/libvlc.dylib"
 else
   echo "LibVLC runtime files were not detected in app bundle." >&2
   exit 1

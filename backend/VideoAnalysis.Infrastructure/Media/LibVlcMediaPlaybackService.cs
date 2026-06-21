@@ -1,4 +1,5 @@
 using LibVLCSharp.Shared;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using VideoAnalysis.Core.Abstractions;
 using VideoAnalysis.Core.Models;
@@ -93,10 +94,16 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         var libVlcDirectory = ResolveLibVlcDirectory();
         if (string.IsNullOrWhiteSpace(libVlcDirectory))
         {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                throw new InvalidOperationException(BuildMacLibVlcMissingMessage());
+            }
+
             LibVLCSharp.Shared.Core.Initialize();
         }
         else
         {
+            Trace.TraceInformation($"LibVLC runtime directory: {libVlcDirectory}");
             LibVLCSharp.Shared.Core.Initialize(libVlcDirectory);
         }
 
@@ -128,8 +135,9 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
             return LowLatencyLibVlcOptions;
         }
 
-        var pluginsDirectory = Path.Combine(libVlcDirectory, "plugins");
-        if (!Directory.Exists(pluginsDirectory))
+        var pluginsDirectory = EnumerateLibVlcPluginCandidateDirectories(libVlcDirectory)
+            .FirstOrDefault(Directory.Exists);
+        if (string.IsNullOrWhiteSpace(pluginsDirectory))
         {
             return LowLatencyLibVlcOptions;
         }
@@ -144,7 +152,8 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
             ? "osx-arm64"
             : "osx-x64";
 
-        foreach (var directory in EnumerateLibVlcCandidateDirectories(baseDirectory, architectureRuntime))
+        var candidates = EnumerateLibVlcCandidateDirectories(baseDirectory, architectureRuntime).ToArray();
+        foreach (var directory in candidates)
         {
             if (ContainsLibVlc(directory))
             {
@@ -152,13 +161,19 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
             }
         }
 
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            Trace.TraceWarning($"LibVLC runtime was not found. Checked: {string.Join("; ", candidates)}");
+        }
+
         return null;
     }
 
     private static IEnumerable<string> EnumerateLibVlcCandidateDirectories(string baseDirectory, string architectureRuntime)
     {
-        yield return Path.Combine(baseDirectory, "lib");
         yield return baseDirectory;
+        yield return Path.Combine(baseDirectory, "lib");
+        yield return Path.Combine(baseDirectory, "libvlc", architectureRuntime, "lib");
         yield return Path.Combine(baseDirectory, "libvlc");
         yield return Path.Combine(baseDirectory, "libvlc", architectureRuntime);
         yield return Path.Combine(baseDirectory, "runtimes", architectureRuntime, "native");
@@ -166,6 +181,13 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         yield return Path.Combine(baseDirectory, "libvlc", "macos");
         yield return Path.Combine(baseDirectory, "libvlc", "macos-arm64");
         yield return Path.Combine(baseDirectory, "libvlc", "macos-x64");
+    }
+
+    private static IEnumerable<string> EnumerateLibVlcPluginCandidateDirectories(string libVlcDirectory)
+    {
+        yield return Path.Combine(libVlcDirectory, "plugins");
+        yield return Path.Combine(libVlcDirectory, "lib", "plugins");
+        yield return Path.Combine(Directory.GetParent(libVlcDirectory)?.FullName ?? libVlcDirectory, "plugins");
     }
 
     private static bool ContainsLibVlc(string directory)
@@ -181,7 +203,21 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         }
 
         return File.Exists(Path.Combine(directory, "libvlc.dylib"))
-            && File.Exists(Path.Combine(directory, "libvlccore.dylib"));
+            && (File.Exists(Path.Combine(directory, "libvlccore.dylib"))
+                || File.Exists(Path.Combine(directory, "lib", "libvlccore.dylib")));
+    }
+
+    private static string BuildMacLibVlcMissingMessage()
+    {
+        var baseDirectory = AppContext.BaseDirectory;
+        var architectureRuntime = RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+            ? "osx-arm64"
+            : "osx-x64";
+        var candidates = EnumerateLibVlcCandidateDirectories(baseDirectory, architectureRuntime);
+
+        return "LibVLC runtime is missing from the macOS app bundle. " +
+            "Rebuild the app with scripts/macos/package-app.sh and make sure libvlc.dylib and libvlccore.dylib are copied. " +
+            $"Checked directories: {string.Join("; ", candidates)}";
     }
 
     public Task<MediaMetadata> OpenAsync(string filePath, CancellationToken cancellationToken)
