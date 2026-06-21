@@ -8,9 +8,13 @@ namespace VideoAnalysis.Infrastructure.Media;
 
 public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposable
 {
+    private static readonly object CoreInitializationLock = new();
+    private static bool _isCoreInitialized;
+
     private static readonly string[] LowLatencyLibVlcOptions =
     [
         "--no-video-title-show",
+        "--no-plugins-cache",
         "--file-caching=60",
         "--network-caching=60",
         "--live-caching=60",
@@ -92,6 +96,9 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         }
 
         var libVlcDirectory = ResolveLibVlcDirectory();
+        var pluginsDirectory = string.IsNullOrWhiteSpace(libVlcDirectory)
+            ? null
+            : ResolveLibVlcPluginsDirectory(libVlcDirectory);
         if (string.IsNullOrWhiteSpace(libVlcDirectory))
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
@@ -99,15 +106,16 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
                 throw new InvalidOperationException(BuildMacLibVlcMissingMessage());
             }
 
-            LibVLCSharp.Shared.Core.Initialize();
+            InitializeLibVlcCore(null);
         }
         else
         {
             Trace.TraceInformation($"LibVLC runtime directory: {libVlcDirectory}");
-            LibVLCSharp.Shared.Core.Initialize(libVlcDirectory);
+            ConfigureLibVlcEnvironment(libVlcDirectory, pluginsDirectory);
+            InitializeLibVlcCore(libVlcDirectory);
         }
 
-        _libVlc = new LibVLC(BuildLibVlcOptions(libVlcDirectory));
+        _libVlc = new LibVLC(BuildLibVlcOptions(pluginsDirectory));
         _mediaPlayer = new MediaPlayer(_libVlc)
         {
             Volume = _volume,
@@ -128,21 +136,71 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         return _mediaPlayer;
     }
 
-    private static string[] BuildLibVlcOptions(string? libVlcDirectory)
+    private static void InitializeLibVlcCore(string? libVlcDirectory)
     {
-        if (string.IsNullOrWhiteSpace(libVlcDirectory))
+        lock (CoreInitializationLock)
         {
-            return LowLatencyLibVlcOptions;
-        }
+            if (_isCoreInitialized)
+            {
+                return;
+            }
 
-        var pluginsDirectory = EnumerateLibVlcPluginCandidateDirectories(libVlcDirectory)
-            .FirstOrDefault(Directory.Exists);
+            if (string.IsNullOrWhiteSpace(libVlcDirectory))
+            {
+                LibVLCSharp.Shared.Core.Initialize();
+            }
+            else
+            {
+                LibVLCSharp.Shared.Core.Initialize(libVlcDirectory);
+            }
+
+            _isCoreInitialized = true;
+        }
+    }
+
+    private static string[] BuildLibVlcOptions(string? pluginsDirectory)
+    {
         if (string.IsNullOrWhiteSpace(pluginsDirectory))
         {
             return LowLatencyLibVlcOptions;
         }
 
         return [.. LowLatencyLibVlcOptions, $"--plugin-path={pluginsDirectory}"];
+    }
+
+    private static void ConfigureLibVlcEnvironment(string libVlcDirectory, string? pluginsDirectory)
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(pluginsDirectory))
+        {
+            throw new InvalidOperationException(BuildMacLibVlcMissingMessage());
+        }
+
+        Trace.TraceInformation($"LibVLC plugins directory: {pluginsDirectory}");
+        Environment.SetEnvironmentVariable("VLC_PLUGIN_PATH", pluginsDirectory);
+        PrependPathEnvironmentVariable("DYLD_FALLBACK_LIBRARY_PATH", libVlcDirectory);
+    }
+
+    private static void PrependPathEnvironmentVariable(string variableName, string path)
+    {
+        var currentValue = Environment.GetEnvironmentVariable(variableName);
+        var separator = Path.PathSeparator;
+        var paths = string.IsNullOrWhiteSpace(currentValue)
+            ? Array.Empty<string>()
+            : currentValue.Split(separator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (paths.Any(candidate => string.Equals(candidate, path, StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        Environment.SetEnvironmentVariable(variableName, string.IsNullOrWhiteSpace(currentValue)
+            ? path
+            : $"{path}{separator}{currentValue}");
     }
 
     private static string? ResolveLibVlcDirectory()
@@ -190,6 +248,12 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         yield return Path.Combine(Directory.GetParent(libVlcDirectory)?.FullName ?? libVlcDirectory, "plugins");
     }
 
+    private static string? ResolveLibVlcPluginsDirectory(string libVlcDirectory)
+    {
+        return EnumerateLibVlcPluginCandidateDirectories(libVlcDirectory)
+            .FirstOrDefault(ContainsLibVlcPlugins);
+    }
+
     private static bool ContainsLibVlc(string directory)
     {
         if (!Directory.Exists(directory))
@@ -203,7 +267,14 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         }
 
         return File.Exists(Path.Combine(directory, "libvlc.dylib"))
-            && File.Exists(Path.Combine(directory, "libvlccore.dylib"));
+            && File.Exists(Path.Combine(directory, "libvlccore.dylib"))
+            && ResolveLibVlcPluginsDirectory(directory) is not null;
+    }
+
+    private static bool ContainsLibVlcPlugins(string directory)
+    {
+        return Directory.Exists(directory)
+            && Directory.EnumerateFiles(directory, "*_plugin.dylib", SearchOption.AllDirectories).Any();
     }
 
     private static string BuildMacLibVlcMissingMessage()
@@ -215,7 +286,7 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         var candidates = EnumerateLibVlcCandidateDirectories(baseDirectory, architectureRuntime);
 
         return "LibVLC runtime is missing from the macOS app bundle. " +
-            "Rebuild the app with scripts/macos/package-app.sh and make sure libvlc.dylib and libvlccore.dylib are copied. " +
+            "Rebuild the app with scripts/macos/package-app.sh and make sure libvlc.dylib, libvlccore.dylib and plugins are copied. " +
             $"Checked directories: {string.Join("; ", candidates)}";
     }
 

@@ -89,14 +89,16 @@ The end user does not need those prerequisites.
 
 ## LibVLC runtime check
 
-The packaged app must contain both files:
+The packaged app must contain the LibVLC libraries and plugins:
 
 - `dist/macos/VideoAnalysis.app/Contents/MacOS/lib/libvlc.dylib`
 - `dist/macos/VideoAnalysis.app/Contents/MacOS/lib/libvlccore.dylib`
+- `dist/macos/VideoAnalysis.app/Contents/MacOS/plugins/.../*_plugin.dylib`
+  - or `dist/macos/VideoAnalysis.app/Contents/MacOS/lib/plugins/.../*_plugin.dylib`, depending on the runtime source
 - `dist/macos/VideoAnalysis.app/Contents/MacOS/libvlc.dylib` as a compatibility loader path
 - `dist/macos/VideoAnalysis.app/Contents/MacOS/libvlccore.dylib` as a compatibility core path
 
-The packaging script exits with an error if either file is missing. It checks:
+The packaging script exits with an error if the libraries or plugin directory are missing. It checks:
 
 1. `LIBVLC_RUNTIME_DIR`, when provided
 2. `/Applications/VLC.app/Contents/MacOS/lib`

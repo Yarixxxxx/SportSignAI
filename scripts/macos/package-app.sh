@@ -42,9 +42,30 @@ NUGET_PACKAGES_DIR="${NUGET_PACKAGES:-${HOME}/.nuget/packages}"
 LIBVLC_MAC_PACKAGE_DIR="${NUGET_PACKAGES_DIR}/videolan.libvlc.mac"
 LIBVLC_RUNTIME_DIR="${LIBVLC_RUNTIME_DIR:-}"
 
-has_libvlc_runtime() {
+has_libvlc_libraries() {
   local runtime_dir="$1"
   [[ -f "${runtime_dir}/libvlc.dylib" && -f "${runtime_dir}/libvlccore.dylib" ]]
+}
+
+find_libvlc_plugins_dir() {
+  local runtime_dir="$1"
+  local candidate
+  for candidate in \
+    "${runtime_dir}/plugins" \
+    "$(dirname "${runtime_dir}")/plugins" \
+    "${runtime_dir}/lib/plugins"; do
+    if [[ -d "${candidate}" ]] && find "${candidate}" -name '*_plugin.dylib' -print -quit 2>/dev/null | grep -q .; then
+      echo "${candidate}"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+has_libvlc_runtime() {
+  local runtime_dir="$1"
+  has_libvlc_libraries "${runtime_dir}" && find_libvlc_plugins_dir "${runtime_dir}" >/dev/null
 }
 
 find_libvlc_runtime_dir() {
@@ -92,12 +113,12 @@ find_vlc_app_runtime_dir() {
 
   local candidate
   for candidate in "${candidates[@]}"; do
-    if has_libvlc_runtime "${candidate}"; then
+    if has_libvlc_libraries "${candidate}"; then
       echo "${candidate}"
       return 0
     fi
 
-    if has_libvlc_runtime "${candidate}/lib"; then
+    if has_libvlc_libraries "${candidate}/lib"; then
       echo "${candidate}/lib"
       return 0
     fi
@@ -115,14 +136,15 @@ copy_runtime_directory() {
 
 copy_plugins_directory() {
   local runtime_dir="$1"
-  if [[ -d "${MACOS_LIB_DIR}/plugins" ]]; then
-    return 0
-  fi
+  rm -rf "${MACOS_DIR}/plugins" "${MACOS_LIB_DIR}/plugins"
 
   if [[ -d "${runtime_dir}/plugins" ]]; then
     cp -R -L "${runtime_dir}/plugins" "${MACOS_LIB_DIR}/plugins"
-  elif [[ -d "$(dirname "${runtime_dir}")/plugins" ]]; then
-    cp -R -L "$(dirname "${runtime_dir}")/plugins" "${MACOS_LIB_DIR}/plugins"
+    return 0
+  fi
+
+  if [[ -d "$(dirname "${runtime_dir}")/plugins" ]]; then
+    cp -R -L "$(dirname "${runtime_dir}")/plugins" "${MACOS_DIR}/plugins"
   fi
 }
 
@@ -144,7 +166,7 @@ copy_libvlc_compatibility_layouts() {
 }
 
 copy_libvlc_runtime() {
-  if has_libvlc_runtime "${MACOS_LIB_DIR}"; then
+  if has_libvlc_libraries "${MACOS_LIB_DIR}" && find_libvlc_plugins_dir "${MACOS_LIB_DIR}" >/dev/null; then
     copy_libvlc_compatibility_layouts "${RUNTIME_IDENTIFIER}"
     return 0
   fi
@@ -168,8 +190,14 @@ copy_libvlc_runtime() {
   copy_runtime_directory "${runtime_dir}"
   copy_plugins_directory "${runtime_dir}"
 
-  if ! has_libvlc_runtime "${MACOS_LIB_DIR}"; then
+  if ! has_libvlc_libraries "${MACOS_LIB_DIR}"; then
     echo "LibVLC runtime copy failed: ${MACOS_LIB_DIR}/libvlc.dylib or libvlccore.dylib is missing." >&2
+    exit 1
+  fi
+
+  if ! find_libvlc_plugins_dir "${MACOS_LIB_DIR}" >/dev/null; then
+    echo "LibVLC runtime copy failed: plugins directory is missing or empty." >&2
+    echo "Expected plugins near ${MACOS_LIB_DIR} or ${MACOS_DIR}/plugins." >&2
     exit 1
   fi
 
@@ -239,6 +267,7 @@ copy_libvlc_runtime
 
 if has_libvlc_runtime "${MACOS_LIB_DIR}"; then
   echo "LibVLC runtime files detected in app bundle: ${MACOS_LIB_DIR}"
+  echo "LibVLC plugins detected in app bundle: $(find_libvlc_plugins_dir "${MACOS_LIB_DIR}")"
   echo "LibVLC compatibility loader path: ${MACOS_DIR}/libvlc.dylib"
   echo "LibVLC compatibility core path: ${MACOS_DIR}/libvlccore.dylib"
 else
