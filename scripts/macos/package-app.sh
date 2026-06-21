@@ -138,6 +138,7 @@ copy_libvlc_compatibility_layouts() {
   mkdir -p "${legacy_runtime_lib_dir}"
 
   cp -f -L "${MACOS_LIB_DIR}/libvlc.dylib" "${MACOS_DIR}/libvlc.dylib"
+  cp -f -L "${libvlccore_path}" "${MACOS_DIR}/libvlccore.dylib"
   cp -f -L "${MACOS_LIB_DIR}/libvlc.dylib" "${legacy_runtime_lib_dir}/libvlc.dylib"
   cp -f -L "${libvlccore_path}" "${legacy_runtime_lib_dir}/libvlccore.dylib"
 }
@@ -239,6 +240,7 @@ copy_libvlc_runtime
 if has_libvlc_runtime "${MACOS_LIB_DIR}"; then
   echo "LibVLC runtime files detected in app bundle: ${MACOS_LIB_DIR}"
   echo "LibVLC compatibility loader path: ${MACOS_DIR}/libvlc.dylib"
+  echo "LibVLC compatibility core path: ${MACOS_DIR}/libvlccore.dylib"
 else
   echo "LibVLC runtime files were not detected in app bundle." >&2
   exit 1

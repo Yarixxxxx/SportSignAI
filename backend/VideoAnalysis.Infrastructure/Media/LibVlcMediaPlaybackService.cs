@@ -171,9 +171,9 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
 
     private static IEnumerable<string> EnumerateLibVlcCandidateDirectories(string baseDirectory, string architectureRuntime)
     {
-        yield return baseDirectory;
         yield return Path.Combine(baseDirectory, "lib");
         yield return Path.Combine(baseDirectory, "libvlc", architectureRuntime, "lib");
+        yield return baseDirectory;
         yield return Path.Combine(baseDirectory, "libvlc");
         yield return Path.Combine(baseDirectory, "libvlc", architectureRuntime);
         yield return Path.Combine(baseDirectory, "runtimes", architectureRuntime, "native");
@@ -203,8 +203,7 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         }
 
         return File.Exists(Path.Combine(directory, "libvlc.dylib"))
-            && (File.Exists(Path.Combine(directory, "libvlccore.dylib"))
-                || File.Exists(Path.Combine(directory, "lib", "libvlccore.dylib")));
+            && File.Exists(Path.Combine(directory, "libvlccore.dylib"));
     }
 
     private static string BuildMacLibVlcMissingMessage()
