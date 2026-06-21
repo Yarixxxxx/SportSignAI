@@ -190,8 +190,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public int SelectedPlaylistEventCount => _selectedPlaylistTagEventIds.Count;
     public bool IsEventTypesTabSelected => string.Equals(SelectedEventsPanelTab, "EventTypes", StringComparison.Ordinal);
     public bool IsEventsTabSelected => string.Equals(SelectedEventsPanelTab, "Events", StringComparison.Ordinal);
-    public bool IsPlaylistsTabSelected => string.Equals(SelectedRightPanelTab, "Playlists", StringComparison.Ordinal);
-    public bool IsStatisticsTabSelected => string.Equals(SelectedRightPanelTab, "Statistics", StringComparison.Ordinal);
+    public bool IsPlaylistsTabSelected => true;
+    public bool IsStatisticsTabSelected => false;
     public bool IsPlayerPanelVisible => !IsPlayerPanelHidden;
     public bool IsPlayerSurfaceVisible => !IsNewProjectDialogOpen && !IsStartupScreenVisible && !IsExportDialogOpen;
     public bool IsTimelineVisible => !IsTimelineHidden;
@@ -255,8 +255,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public bool CanToggleBroadcastLive => IsBroadcastModeProject
         && !IsBroadcastRecording
         && !IsBroadcastRecordingOperationInProgress;
+    public bool CanSyncBroadcastLive => IsBroadcastModeProject
+        && IsBroadcastDvrRunning
+        && !IsBroadcastRecordingOperationInProgress;
     public string BroadcastLiveButtonText => IsBroadcastDvrRunning ? "Остановить трансляцию" : "Возобновить трансляцию";
     public string BroadcastLiveGlyph => IsBroadcastDvrRunning ? "■" : "▶";
+    public string BroadcastSyncButtonText => "Синхронизировать";
     public string BroadcastRecordingButtonText => IsBroadcastRecording ? "Остановить запись" : "Начать запись";
     public string BroadcastRecordingGlyph => IsBroadcastRecording ? "■" : "●";
     public string BroadcastRecordingStatusText => IsBroadcastRecording
@@ -483,6 +487,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsBroadcastPanelVisible));
         OnPropertyChanged(nameof(IsBroadcastEntityAvailable));
         OnPropertyChanged(nameof(CanUseBroadcastRecording));
+        OnPropertyChanged(nameof(CanSyncBroadcastLive));
     }
 
     partial void OnIsBroadcastTimelineActiveChanged(bool value)
@@ -730,6 +735,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(CanUseBroadcastRecording));
         OnPropertyChanged(nameof(CanToggleBroadcastLive));
+        OnPropertyChanged(nameof(CanSyncBroadcastLive));
         OnPropertyChanged(nameof(BroadcastLiveButtonText));
         OnPropertyChanged(nameof(BroadcastLiveGlyph));
         OnPropertyChanged(nameof(BroadcastRecordingStatusText));
@@ -740,6 +746,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(CanUseBroadcastRecording));
         OnPropertyChanged(nameof(CanToggleBroadcastLive));
+        OnPropertyChanged(nameof(CanSyncBroadcastLive));
     }
 
     partial void OnIsEditingPresetChanged(bool value)
@@ -1143,6 +1150,17 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         IsPlaying = false;
         ResetVideoZoomState();
         RefreshPlaybackUiState();
+    }
+
+    public void SynchronizeBroadcastLiveEdge()
+    {
+        if (!CanSyncBroadcastLive)
+        {
+            return;
+        }
+
+        SyncPlayerToBroadcastLiveEdge();
+        StatusMessage = "Трансляция синхронизирована с реальным временем.";
     }
 
     private async Task OpenBroadcastRecordingInPlayerAsync(string recordedPath, long broadcastStartFrame)

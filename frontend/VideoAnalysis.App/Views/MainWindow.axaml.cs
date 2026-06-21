@@ -1188,6 +1188,23 @@ public partial class MainWindow : Window
         await EnsureBroadcastDisplayAsync();
     }
 
+    private async void OnBroadcastSyncButtonClick(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel is null || !_viewModel.CanSyncBroadcastLive)
+        {
+            return;
+        }
+
+        _viewModel.SynchronizeBroadcastLiveEdge();
+        if (!_isBroadcastLiveStarted)
+        {
+            await EnsureBroadcastDisplayAsync();
+            return;
+        }
+
+        await RefreshBroadcastLivePreviewAsync();
+    }
+
     private async void OnBroadcastLiveButtonClick(object? sender, RoutedEventArgs e)
     {
         if (_viewModel is null || !_viewModel.CanToggleBroadcastLive)

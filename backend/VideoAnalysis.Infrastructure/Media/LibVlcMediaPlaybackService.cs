@@ -175,10 +175,13 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
             return false;
         }
 
-        var libraryName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-            ? "libvlc.dll"
-            : "libvlc.dylib";
-        return File.Exists(Path.Combine(directory, libraryName));
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return File.Exists(Path.Combine(directory, "libvlc.dll"));
+        }
+
+        return File.Exists(Path.Combine(directory, "libvlc.dylib"))
+            && File.Exists(Path.Combine(directory, "libvlccore.dylib"));
     }
 
     public Task<MediaMetadata> OpenAsync(string filePath, CancellationToken cancellationToken)

@@ -1245,7 +1245,7 @@
                                VerticalAlignment="Center"
                                Foreground="#4FA0FF"
                                FontWeight="SemiBold"/>
-                    <TextBlock Grid.Column="1" Text="Клипы/Статистика"/>
+                    <TextBlock Grid.Column="1" Text="Клипы"/>
                   </Grid>
                 </Button>
               </StackPanel>
@@ -2141,7 +2141,7 @@
                   PointerPressed="OnPanelHeaderPointerPressed">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
               <TextBlock Classes="section-title"
-                         Text="Клипы / статистика"
+                         Text="Клипы"
                          VerticalAlignment="Center"/>
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
                 <Button Classes="panel-window-button" Tag="Analysis:Minimize" Click="OnPanelWindowControlClick" Content="−"/>
@@ -2151,7 +2151,7 @@
             </Grid>
           </Border>
 
-          <Border Grid.Row="1" Classes="panel-tabs">
+          <Border Grid.Row="1" Classes="panel-tabs" IsVisible="False">
             <Grid ColumnDefinitions="*,*" ColumnSpacing="0">
               <ToggleButton Grid.Column="0"
                             Classes="tab-button"
@@ -2164,7 +2164,7 @@
                             IsChecked="{Binding IsStatisticsTabSelected}"
                             Command="{Binding SelectRightPanelTabCommand}"
                             CommandParameter="Statistics"
-                            Content="Статистика"/>
+                            Content="Клипы"/>
             </Grid>
           </Border>
 
@@ -2942,6 +2942,21 @@
                                  FontWeight="SemiBold"/>
                     </StackPanel>
                   </Button>
+                  <Button Classes="broadcast-record-button"
+                          IsEnabled="{Binding CanSyncBroadcastLive}"
+                          Click="OnBroadcastSyncButtonClick"
+                          ToolTip.Tip="Синхронизировать трансляцию с реальным временем">
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="8"
+                                VerticalAlignment="Center">
+                      <TextBlock Text="↻"
+                                 FontSize="15"
+                                 FontWeight="SemiBold"/>
+                      <TextBlock Text="{Binding BroadcastSyncButtonText}"
+                                 FontSize="13"
+                                 FontWeight="SemiBold"/>
+                    </StackPanel>
+                  </Button>
                   <TextBlock Text="{Binding BroadcastRecordingStatusText}"
                              VerticalAlignment="Center"
                              Foreground="#C4D3EA"
@@ -3007,8 +3022,8 @@
             <WrapPanel HorizontalAlignment="Center">
               <Button Classes="workspace-entity-button" Tag="0:Player" Click="OnCreateSlotEntityClick" Content="Плеер" Margin="4"/>
               <Button Classes="workspace-entity-button" Tag="0:Timeline" Click="OnCreateSlotEntityClick" Content="Таймлайн" Margin="4"/>
-              <Button Classes="workspace-entity-button" Tag="0:EventsClips" Click="OnCreateSlotEntityClick" Content="События/клипы" Margin="4"/>
-              <Button Classes="workspace-entity-button" Tag="0:Statistics" Click="OnCreateSlotEntityClick" Content="Статистика" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="0:EventsClips" Click="OnCreateSlotEntityClick" Content="События" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="0:Statistics" Click="OnCreateSlotEntityClick" Content="Клипы" Margin="4"/>
               <Button Classes="workspace-entity-button" Tag="0:Broadcast" Click="OnCreateSlotEntityClick" Content="Трансляция" Margin="4" IsVisible="{Binding IsBroadcastEntityAvailable}"/>
             </WrapPanel>
           </StackPanel>
@@ -3042,8 +3057,8 @@
             <WrapPanel HorizontalAlignment="Center">
               <Button Classes="workspace-entity-button" Tag="1:Player" Click="OnCreateSlotEntityClick" Content="Плеер" Margin="4"/>
               <Button Classes="workspace-entity-button" Tag="1:Timeline" Click="OnCreateSlotEntityClick" Content="Таймлайн" Margin="4"/>
-              <Button Classes="workspace-entity-button" Tag="1:EventsClips" Click="OnCreateSlotEntityClick" Content="События/клипы" Margin="4"/>
-              <Button Classes="workspace-entity-button" Tag="1:Statistics" Click="OnCreateSlotEntityClick" Content="Статистика" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="1:EventsClips" Click="OnCreateSlotEntityClick" Content="События" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="1:Statistics" Click="OnCreateSlotEntityClick" Content="Клипы" Margin="4"/>
               <Button Classes="workspace-entity-button" Tag="1:Broadcast" Click="OnCreateSlotEntityClick" Content="Трансляция" Margin="4" IsVisible="{Binding IsBroadcastEntityAvailable}"/>
             </WrapPanel>
           </StackPanel>
@@ -3077,8 +3092,8 @@
             <WrapPanel HorizontalAlignment="Center">
               <Button Classes="workspace-entity-button" Tag="2:Player" Click="OnCreateSlotEntityClick" Content="Плеер" Margin="4"/>
               <Button Classes="workspace-entity-button" Tag="2:Timeline" Click="OnCreateSlotEntityClick" Content="Таймлайн" Margin="4"/>
-              <Button Classes="workspace-entity-button" Tag="2:EventsClips" Click="OnCreateSlotEntityClick" Content="События/клипы" Margin="4"/>
-              <Button Classes="workspace-entity-button" Tag="2:Statistics" Click="OnCreateSlotEntityClick" Content="Статистика" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="2:EventsClips" Click="OnCreateSlotEntityClick" Content="События" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="2:Statistics" Click="OnCreateSlotEntityClick" Content="Клипы" Margin="4"/>
               <Button Classes="workspace-entity-button" Tag="2:Broadcast" Click="OnCreateSlotEntityClick" Content="Трансляция" Margin="4" IsVisible="{Binding IsBroadcastEntityAvailable}"/>
             </WrapPanel>
           </StackPanel>
@@ -3112,8 +3127,8 @@
             <WrapPanel HorizontalAlignment="Center">
               <Button Classes="workspace-entity-button" Tag="3:Player" Click="OnCreateSlotEntityClick" Content="Плеер" Margin="4"/>
               <Button Classes="workspace-entity-button" Tag="3:Timeline" Click="OnCreateSlotEntityClick" Content="Таймлайн" Margin="4"/>
-              <Button Classes="workspace-entity-button" Tag="3:EventsClips" Click="OnCreateSlotEntityClick" Content="События/клипы" Margin="4"/>
-              <Button Classes="workspace-entity-button" Tag="3:Statistics" Click="OnCreateSlotEntityClick" Content="Статистика" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="3:EventsClips" Click="OnCreateSlotEntityClick" Content="События" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="3:Statistics" Click="OnCreateSlotEntityClick" Content="Клипы" Margin="4"/>
               <Button Classes="workspace-entity-button" Tag="3:Broadcast" Click="OnCreateSlotEntityClick" Content="Трансляция" Margin="4" IsVisible="{Binding IsBroadcastEntityAvailable}"/>
             </WrapPanel>
           </StackPanel>
@@ -3147,8 +3162,8 @@
             <WrapPanel HorizontalAlignment="Center">
               <Button Classes="workspace-entity-button" Tag="4:Player" Click="OnCreateSlotEntityClick" Content="Плеер" Margin="4"/>
               <Button Classes="workspace-entity-button" Tag="4:Timeline" Click="OnCreateSlotEntityClick" Content="Таймлайн" Margin="4"/>
-              <Button Classes="workspace-entity-button" Tag="4:EventsClips" Click="OnCreateSlotEntityClick" Content="События/клипы" Margin="4"/>
-              <Button Classes="workspace-entity-button" Tag="4:Statistics" Click="OnCreateSlotEntityClick" Content="Статистика" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="4:EventsClips" Click="OnCreateSlotEntityClick" Content="События" Margin="4"/>
+              <Button Classes="workspace-entity-button" Tag="4:Statistics" Click="OnCreateSlotEntityClick" Content="Клипы" Margin="4"/>
               <Button Classes="workspace-entity-button" Tag="4:Broadcast" Click="OnCreateSlotEntityClick" Content="Трансляция" Margin="4" IsVisible="{Binding IsBroadcastEntityAvailable}"/>
             </WrapPanel>
           </StackPanel>

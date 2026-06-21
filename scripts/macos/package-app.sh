@@ -40,6 +40,12 @@ esac
 
 NUGET_PACKAGES_DIR="${NUGET_PACKAGES:-${HOME}/.nuget/packages}"
 LIBVLC_MAC_PACKAGE_DIR="${NUGET_PACKAGES_DIR}/videolan.libvlc.mac"
+LIBVLC_RUNTIME_DIR="${LIBVLC_RUNTIME_DIR:-}"
+
+has_libvlc_runtime() {
+  local runtime_dir="$1"
+  [[ -f "${runtime_dir}/libvlc.dylib" && -f "${runtime_dir}/libvlccore.dylib" ]]
+}
 
 find_libvlc_runtime_dir() {
   local search_root="$1"
@@ -56,12 +62,12 @@ find_libvlc_runtime_dir() {
     else
       fallback_paths+=("${libvlc_path}")
     fi
-  done < <(find "${search_root}" -type f -name 'libvlc.dylib' 2>/dev/null)
+  done < <(find -L "${search_root}" -name 'libvlc.dylib' 2>/dev/null)
 
   for libvlc_path in "${preferred_paths[@]}" "${fallback_paths[@]}"; do
     local runtime_dir
     runtime_dir="$(dirname "${libvlc_path}")"
-    if [[ -f "${runtime_dir}/libvlccore.dylib" ]]; then
+    if has_libvlc_runtime "${runtime_dir}"; then
       echo "${runtime_dir}"
       return 0
     fi
@@ -70,36 +76,81 @@ find_libvlc_runtime_dir() {
   return 1
 }
 
+find_vlc_app_runtime_dir() {
+  local candidates=()
+
+  if [[ -n "${LIBVLC_RUNTIME_DIR}" ]]; then
+    candidates+=("${LIBVLC_RUNTIME_DIR}")
+  fi
+
+  candidates+=(
+    "/Applications/VLC.app/Contents/MacOS/lib"
+    "/Applications/VLC.app/Contents/MacOS"
+    "${HOME}/Applications/VLC.app/Contents/MacOS/lib"
+    "${HOME}/Applications/VLC.app/Contents/MacOS"
+  )
+
+  local candidate
+  for candidate in "${candidates[@]}"; do
+    if has_libvlc_runtime "${candidate}"; then
+      echo "${candidate}"
+      return 0
+    fi
+
+    if has_libvlc_runtime "${candidate}/lib"; then
+      echo "${candidate}/lib"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+copy_runtime_directory() {
+  local runtime_dir="$1"
+  rm -rf "${MACOS_LIB_DIR}"
+  mkdir -p "${MACOS_LIB_DIR}"
+  cp -R -L "${runtime_dir}/." "${MACOS_LIB_DIR}/"
+}
+
+copy_plugins_directory() {
+  local runtime_dir="$1"
+  if [[ -d "${MACOS_LIB_DIR}/plugins" ]]; then
+    return 0
+  fi
+
+  if [[ -d "${runtime_dir}/plugins" ]]; then
+    cp -R -L "${runtime_dir}/plugins" "${MACOS_LIB_DIR}/plugins"
+  elif [[ -d "$(dirname "${runtime_dir}")/plugins" ]]; then
+    cp -R -L "$(dirname "${runtime_dir}")/plugins" "${MACOS_LIB_DIR}/plugins"
+  fi
+}
+
 copy_libvlc_runtime() {
-  if [[ -f "${MACOS_LIB_DIR}/libvlc.dylib" && -f "${MACOS_LIB_DIR}/libvlccore.dylib" ]]; then
+  if has_libvlc_runtime "${MACOS_LIB_DIR}"; then
     return 0
   fi
 
   local runtime_dir=""
-  if runtime_dir="$(find_libvlc_runtime_dir "${PUBLISH_DIR}")"; then
+  if runtime_dir="$(find_vlc_app_runtime_dir)"; then
+    echo "Copying LibVLC runtime from installed VLC app: ${runtime_dir}"
+  elif runtime_dir="$(find_libvlc_runtime_dir "${PUBLISH_DIR}")"; then
     echo "Copying LibVLC runtime from publish output: ${runtime_dir}"
   elif runtime_dir="$(find_libvlc_runtime_dir "${LIBVLC_MAC_PACKAGE_DIR}")"; then
     echo "Copying LibVLC runtime from NuGet cache: ${runtime_dir}"
   else
     echo "Unable to locate libvlc.dylib/libvlccore.dylib." >&2
     echo "Expected them in publish output or NuGet package: ${LIBVLC_MAC_PACKAGE_DIR}" >&2
+    echo "Also checked: LIBVLC_RUNTIME_DIR and /Applications/VLC.app/Contents/MacOS/lib" >&2
     echo "Try running: dotnet restore \"${PROJECT_PATH}\" -r ${RUNTIME_IDENTIFIER}" >&2
+    echo "Or install VLC and rerun this script: brew install --cask vlc" >&2
     exit 1
   fi
 
-  rm -rf "${MACOS_LIB_DIR}"
-  mkdir -p "${MACOS_LIB_DIR}"
-  cp -R "${runtime_dir}/." "${MACOS_LIB_DIR}/"
+  copy_runtime_directory "${runtime_dir}"
+  copy_plugins_directory "${runtime_dir}"
 
-  if [[ ! -d "${MACOS_LIB_DIR}/plugins" ]]; then
-    if [[ -d "${runtime_dir}/plugins" ]]; then
-      cp -R "${runtime_dir}/plugins" "${MACOS_LIB_DIR}/plugins"
-    elif [[ -d "$(dirname "${runtime_dir}")/plugins" ]]; then
-      cp -R "$(dirname "${runtime_dir}")/plugins" "${MACOS_LIB_DIR}/plugins"
-    fi
-  fi
-
-  if [[ ! -f "${MACOS_LIB_DIR}/libvlc.dylib" || ! -f "${MACOS_LIB_DIR}/libvlccore.dylib" ]]; then
+  if ! has_libvlc_runtime "${MACOS_LIB_DIR}"; then
     echo "LibVLC runtime copy failed: ${MACOS_LIB_DIR}/libvlc.dylib or libvlccore.dylib is missing." >&2
     exit 1
   fi
@@ -125,6 +176,7 @@ mkdir -p "${MACOS_DIR}" "${MACOS_LIB_DIR}" "${RESOURCES_DIR}"
 
 echo "Copying publish output into app bundle..."
 cp -R "${PUBLISH_DIR}/." "${MACOS_DIR}/"
+rm -f "${MACOS_DIR}/libvlc.dylib" "${MACOS_DIR}/libvlccore.dylib"
 
 chmod +x "${MACOS_DIR}/${APP_EXECUTABLE}"
 
@@ -164,7 +216,7 @@ fi
 
 copy_libvlc_runtime
 
-if [[ -f "${MACOS_LIB_DIR}/libvlc.dylib" && -f "${MACOS_LIB_DIR}/libvlccore.dylib" ]]; then
+if has_libvlc_runtime "${MACOS_LIB_DIR}"; then
   echo "LibVLC runtime files detected in app bundle: ${MACOS_LIB_DIR}"
 else
   echo "LibVLC runtime files were not detected in app bundle." >&2

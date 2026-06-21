@@ -23,6 +23,7 @@ The user should **not** need to:
   - `tools/ffmpeg/macos-arm64/unpacked/ffmpeg`
 - macOS LibVLC runtime is referenced through:
   - `VideoLAN.LibVLC.Mac`
+  - if the NuGet package does not expose both native libraries, the packaging script can copy them from an installed `VLC.app`
 
 ## One-command packaging on Mac M1
 
@@ -82,16 +83,29 @@ After packaging:
 
 - `.NET SDK 10`
 - standard macOS build tools
+- optional fallback for LibVLC packaging: `VLC.app` in `/Applications`
 
 The end user does not need those prerequisites.
 
-## Current risk to watch
+## LibVLC runtime check
 
-The packaging script warns if LibVLC native files are not present in publish output. In that case:
+The packaged app must contain both files:
 
-- the app bundle is still created
-- playback on macOS may still fail until LibVLC runtime is fully present in the publish output
+- `dist/macos/VideoAnalysis.app/Contents/MacOS/lib/libvlc.dylib`
+- `dist/macos/VideoAnalysis.app/Contents/MacOS/lib/libvlccore.dylib`
 
-That warning is the main go/no-go signal during the first macOS packaging pass.
+The packaging script exits with an error if either file is missing. It checks:
+
+1. `LIBVLC_RUNTIME_DIR`, when provided
+2. `/Applications/VLC.app/Contents/MacOS/lib`
+3. publish output
+4. the `VideoLAN.LibVLC.Mac` NuGet cache
+
+If LibVLC cannot be found, install VLC on the packaging Mac and rerun:
+
+```bash
+brew install --cask vlc
+./scripts/macos/package-app.sh
+```
 
 mpv/libmpv is not required on macOS. The macOS build uses LibVLC playback and excludes the mpv-specific playback service from the app binary.
