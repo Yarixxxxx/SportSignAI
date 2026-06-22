@@ -49,6 +49,7 @@ public partial class MainWindow : Window
     private const uint GfBegin = 0x00000001;
     private const uint GfEnd = 0x00000004;
     private const uint GcZoom = 0x00000001;
+    private const int MacBroadcastFramePreviewIntervalMs = 33;
 
     private ToggleButton FileMenuButton => this.FindControl<ToggleButton>(nameof(FileMenuButton))
         ?? throw new InvalidOperationException("FileMenuButton was not found.");
@@ -409,7 +410,7 @@ public partial class MainWindow : Window
         _broadcastLiveEdgeTimer.Start();
         _broadcastFramePreviewTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
-            Interval = TimeSpan.FromMilliseconds(85)
+            Interval = TimeSpan.FromMilliseconds(MacBroadcastFramePreviewIntervalMs)
         };
         _broadcastFramePreviewTimer.Tick += OnBroadcastFramePreviewTimerTick;
         DataContextChanged += OnDataContextChanged;

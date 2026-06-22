@@ -17,6 +17,7 @@ public sealed class BroadcastDvrService : IDisposable
     private const int PreviewUdpFifoPackets = 16384;
     private const int PreviewUdpBufferBytes = 1048576;
     private const double FallbackFramesPerSecond = 30d;
+    private const double MacFramePreviewFramesPerSecond = 30d;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -1072,7 +1073,7 @@ public sealed class BroadcastDvrService : IDisposable
         return string.Join(' ',
             "-map 0:v:0",
             "-an",
-            "-vf fps=12,scale=1280:-2",
+            $"-vf fps={ToInvariant(MacFramePreviewFramesPerSecond)},scale=1280:-2",
             "-q:v 4",
             "-update 1",
             "-f image2",
