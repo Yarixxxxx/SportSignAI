@@ -167,6 +167,11 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
 
     private static string[] BuildLibVlcOptions()
     {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            return Array.Empty<string>();
+        }
+
         return LowLatencyLibVlcOptions;
     }
 

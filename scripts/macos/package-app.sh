@@ -68,6 +68,45 @@ has_libvlc_runtime() {
   has_libvlc_libraries "${runtime_dir}" && find_libvlc_plugins_dir "${runtime_dir}" >/dev/null
 }
 
+expected_macho_architecture() {
+  case "${RUNTIME_IDENTIFIER}" in
+    osx-arm64)
+      echo "arm64"
+      ;;
+    osx-x64)
+      echo "x86_64"
+      ;;
+  esac
+}
+
+ensure_macho_architecture() {
+  local binary_path="$1"
+  local expected_architecture
+  expected_architecture="$(expected_macho_architecture)"
+
+  if ! command -v file >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local file_info
+  file_info="$(file "${binary_path}")"
+  echo "Architecture check: ${file_info}"
+
+  if [[ "${file_info}" != *"${expected_architecture}"* ]]; then
+    echo "Architecture mismatch for ${binary_path}" >&2
+    echo "Expected ${expected_architecture} because RUNTIME_IDENTIFIER=${RUNTIME_IDENTIFIER}." >&2
+    exit 1
+  fi
+}
+
+print_otool_dependencies() {
+  local binary_path="$1"
+  if command -v otool >/dev/null 2>&1; then
+    echo "Dependencies for ${binary_path}:"
+    otool -L "${binary_path}" || true
+  fi
+}
+
 find_libvlc_runtime_dir() {
   local search_root="$1"
   if [[ ! -d "${search_root}" ]]; then
@@ -173,6 +212,26 @@ copy_libvlc_compatibility_layouts() {
   cp -f -L "${libvlccore_path}" "${MACOS_DIR}/libvlccore.dylib"
   cp -f -L "${MACOS_LIB_DIR}/libvlc.dylib" "${legacy_runtime_lib_dir}/libvlc.dylib"
   cp -f -L "${libvlccore_path}" "${legacy_runtime_lib_dir}/libvlccore.dylib"
+}
+
+validate_libvlc_runtime() {
+  local plugins_dir
+  plugins_dir="$(find_libvlc_plugins_dir "${MACOS_LIB_DIR}")"
+
+  ensure_macho_architecture "${MACOS_DIR}/${APP_EXECUTABLE}"
+  ensure_macho_architecture "${MACOS_LIB_DIR}/libvlc.dylib"
+  ensure_macho_architecture "${MACOS_LIB_DIR}/libvlccore.dylib"
+
+  if [[ -n "${plugins_dir}" ]]; then
+    local first_plugin
+    first_plugin="$(find "${plugins_dir}" -name '*_plugin.dylib' -print -quit)"
+    if [[ -n "${first_plugin}" ]]; then
+      ensure_macho_architecture "${first_plugin}"
+    fi
+  fi
+
+  print_otool_dependencies "${MACOS_LIB_DIR}/libvlc.dylib"
+  print_otool_dependencies "${MACOS_LIB_DIR}/libvlccore.dylib"
 }
 
 copy_libvlc_runtime() {
@@ -282,6 +341,7 @@ if has_libvlc_runtime "${MACOS_LIB_DIR}"; then
   echo "LibVLC plugins detected in app bundle: $(find_libvlc_plugins_dir "${MACOS_LIB_DIR}")"
   echo "LibVLC compatibility loader path: ${MACOS_DIR}/libvlc.dylib"
   echo "LibVLC compatibility core path: ${MACOS_DIR}/libvlccore.dylib"
+  validate_libvlc_runtime
 else
   echo "LibVLC runtime files were not detected in app bundle." >&2
   exit 1

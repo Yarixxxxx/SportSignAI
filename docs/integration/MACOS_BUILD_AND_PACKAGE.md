@@ -105,6 +105,8 @@ The packaging script exits with an error if the libraries or plugin directory ar
 3. the `VideoLAN.LibVLC.Mac` NuGet cache
 4. `/Applications/VLC.app/Contents/MacOS/lib`
 
+It also prints `file` and `otool -L` diagnostics for the app executable, `libvlc.dylib`, `libvlccore.dylib`, and one plugin. If an `osx-arm64` bundle contains only `x86_64` native libraries, packaging stops before the app is opened.
+
 If LibVLC cannot be found, install VLC on the packaging Mac and rerun:
 
 ```bash
