@@ -97,14 +97,24 @@ find_libvlc_runtime_dir() {
   return 1
 }
 
-find_vlc_app_runtime_dir() {
-  local candidates=()
-
+find_explicit_libvlc_runtime_dir() {
   if [[ -n "${LIBVLC_RUNTIME_DIR}" ]]; then
-    candidates+=("${LIBVLC_RUNTIME_DIR}")
+    if has_libvlc_libraries "${LIBVLC_RUNTIME_DIR}"; then
+      echo "${LIBVLC_RUNTIME_DIR}"
+      return 0
+    fi
+
+    if has_libvlc_libraries "${LIBVLC_RUNTIME_DIR}/lib"; then
+      echo "${LIBVLC_RUNTIME_DIR}/lib"
+      return 0
+    fi
   fi
 
-  candidates+=(
+  return 1
+}
+
+find_vlc_app_runtime_dir() {
+  local candidates=(
     "/Applications/VLC.app/Contents/MacOS/lib"
     "/Applications/VLC.app/Contents/MacOS"
     "${HOME}/Applications/VLC.app/Contents/MacOS/lib"
@@ -172,12 +182,14 @@ copy_libvlc_runtime() {
   fi
 
   local runtime_dir=""
-  if runtime_dir="$(find_vlc_app_runtime_dir)"; then
-    echo "Copying LibVLC runtime from installed VLC app: ${runtime_dir}"
+  if runtime_dir="$(find_explicit_libvlc_runtime_dir)"; then
+    echo "Copying LibVLC runtime from LIBVLC_RUNTIME_DIR: ${runtime_dir}"
   elif runtime_dir="$(find_libvlc_runtime_dir "${PUBLISH_DIR}")"; then
     echo "Copying LibVLC runtime from publish output: ${runtime_dir}"
   elif runtime_dir="$(find_libvlc_runtime_dir "${LIBVLC_MAC_PACKAGE_DIR}")"; then
     echo "Copying LibVLC runtime from NuGet cache: ${runtime_dir}"
+  elif runtime_dir="$(find_vlc_app_runtime_dir)"; then
+    echo "Copying LibVLC runtime from installed VLC app: ${runtime_dir}"
   else
     echo "Unable to locate libvlc.dylib/libvlccore.dylib." >&2
     echo "Expected them in publish output or NuGet package: ${LIBVLC_MAC_PACKAGE_DIR}" >&2

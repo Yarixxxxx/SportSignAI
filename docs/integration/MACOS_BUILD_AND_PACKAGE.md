@@ -101,9 +101,9 @@ The packaged app must contain the LibVLC libraries and plugins:
 The packaging script exits with an error if the libraries or plugin directory are missing. It checks:
 
 1. `LIBVLC_RUNTIME_DIR`, when provided
-2. `/Applications/VLC.app/Contents/MacOS/lib`
-3. publish output
-4. the `VideoLAN.LibVLC.Mac` NuGet cache
+2. publish output
+3. the `VideoLAN.LibVLC.Mac` NuGet cache
+4. `/Applications/VLC.app/Contents/MacOS/lib`
 
 If LibVLC cannot be found, install VLC on the packaging Mac and rerun:
 

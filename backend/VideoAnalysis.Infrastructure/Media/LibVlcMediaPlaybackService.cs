@@ -14,7 +14,6 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
     private static readonly string[] LowLatencyLibVlcOptions =
     [
         "--no-video-title-show",
-        "--no-plugins-cache",
         "--file-caching=60",
         "--network-caching=60",
         "--live-caching=60",
@@ -115,7 +114,15 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
             InitializeLibVlcCore(libVlcDirectory);
         }
 
-        _libVlc = new LibVLC(BuildLibVlcOptions(pluginsDirectory));
+        try
+        {
+            _libVlc = new LibVLC(BuildLibVlcOptions());
+        }
+        catch (Exception ex) when (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            throw new InvalidOperationException(BuildMacLibVlcInstantiationMessage(libVlcDirectory, pluginsDirectory), ex);
+        }
+
         _mediaPlayer = new MediaPlayer(_libVlc)
         {
             Volume = _volume,
@@ -158,14 +165,9 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         }
     }
 
-    private static string[] BuildLibVlcOptions(string? pluginsDirectory)
+    private static string[] BuildLibVlcOptions()
     {
-        if (string.IsNullOrWhiteSpace(pluginsDirectory))
-        {
-            return LowLatencyLibVlcOptions;
-        }
-
-        return [.. LowLatencyLibVlcOptions, $"--plugin-path={pluginsDirectory}"];
+        return LowLatencyLibVlcOptions;
     }
 
     private static void ConfigureLibVlcEnvironment(string libVlcDirectory, string? pluginsDirectory)
@@ -181,6 +183,7 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         }
 
         Trace.TraceInformation($"LibVLC plugins directory: {pluginsDirectory}");
+        Trace.TraceInformation($"LibVLC plugin files detected: {CountLibVlcPlugins(pluginsDirectory)}");
         Environment.SetEnvironmentVariable("VLC_PLUGIN_PATH", pluginsDirectory);
         PrependPathEnvironmentVariable("DYLD_FALLBACK_LIBRARY_PATH", libVlcDirectory);
     }
@@ -277,6 +280,13 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
             && Directory.EnumerateFiles(directory, "*_plugin.dylib", SearchOption.AllDirectories).Any();
     }
 
+    private static int CountLibVlcPlugins(string? directory)
+    {
+        return string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory)
+            ? 0
+            : Directory.EnumerateFiles(directory, "*_plugin.dylib", SearchOption.AllDirectories).Count();
+    }
+
     private static string BuildMacLibVlcMissingMessage()
     {
         var baseDirectory = AppContext.BaseDirectory;
@@ -288,6 +298,18 @@ public sealed class LibVlcMediaPlaybackService : IMediaPlaybackService, IDisposa
         return "LibVLC runtime is missing from the macOS app bundle. " +
             "Rebuild the app with scripts/macos/package-app.sh and make sure libvlc.dylib, libvlccore.dylib and plugins are copied. " +
             $"Checked directories: {string.Join("; ", candidates)}";
+    }
+
+    private static string BuildMacLibVlcInstantiationMessage(string? libVlcDirectory, string? pluginsDirectory)
+    {
+        var pluginCount = CountLibVlcPlugins(pluginsDirectory);
+        var pluginPath = Environment.GetEnvironmentVariable("VLC_PLUGIN_PATH") ?? string.Empty;
+        var fallbackLibraryPath = Environment.GetEnvironmentVariable("DYLD_FALLBACK_LIBRARY_PATH") ?? string.Empty;
+
+        return "LibVLC was loaded but failed to create a native instance. " +
+            "Check that the bundled LibVLC architecture matches the app architecture and that plugin dependencies can be loaded. " +
+            $"Runtime: '{libVlcDirectory}'. Plugins: '{pluginsDirectory}'. Plugin count: {pluginCount}. " +
+            $"VLC_PLUGIN_PATH: '{pluginPath}'. DYLD_FALLBACK_LIBRARY_PATH: '{fallbackLibraryPath}'.";
     }
 
     public Task<MediaMetadata> OpenAsync(string filePath, CancellationToken cancellationToken)
