@@ -8,7 +8,6 @@ namespace VideoAnalysis.App.Media;
 public sealed class MacAvFoundationVideoView : NativeControlHost, IDisposable
 {
     private IntPtr _nativeView;
-    private IntPtr _playerLayer;
     private IntPtr _player;
     private bool _isMuted;
     private int _volume = 100;
@@ -149,7 +148,6 @@ public sealed class MacAvFoundationVideoView : NativeControlHost, IDisposable
         if (OperatingSystem.IsMacOS())
         {
             ClosePlayer();
-            ReleaseNative(ref _playerLayer);
             ReleaseNative(ref _nativeView);
         }
 
@@ -165,7 +163,6 @@ public sealed class MacAvFoundationVideoView : NativeControlHost, IDisposable
 
         _disposed = true;
         ClosePlayer();
-        ReleaseNative(ref _playerLayer);
         ReleaseNative(ref _nativeView);
     }
 
@@ -176,18 +173,15 @@ public sealed class MacAvFoundationVideoView : NativeControlHost, IDisposable
             return;
         }
 
-        _nativeView = MacObjectiveC.CreateLayerBackedView();
-        _playerLayer = MacObjectiveC.CreateAvPlayerLayer();
-        MacObjectiveC.SendVoidIntPtr(_nativeView, "setLayer:", _playerLayer);
+        _nativeView = MacObjectiveC.CreateAvPlayerView();
         MacObjectiveC.SendRetain(_nativeView);
-        MacObjectiveC.SendRetain(_playerLayer);
     }
 
     private void ReplacePlayer(IntPtr player)
     {
-        if (_playerLayer != IntPtr.Zero)
+        if (_nativeView != IntPtr.Zero)
         {
-            MacObjectiveC.SendVoidIntPtr(_playerLayer, "setPlayer:", player);
+            MacObjectiveC.SendVoidIntPtr(_nativeView, "setPlayer:", player);
         }
 
         ReleaseNative(ref _player);
@@ -231,7 +225,7 @@ internal static class MacObjectiveC
 {
     private const string LibObjC = "/usr/lib/libobjc.A.dylib";
     private const string AvFoundation = "/System/Library/Frameworks/AVFoundation.framework/AVFoundation";
-    private const string QuartzCore = "/System/Library/Frameworks/QuartzCore.framework/QuartzCore";
+    private const string AvKit = "/System/Library/Frameworks/AVKit.framework/AVKit";
     private const string CoreMedia = "/System/Library/Frameworks/CoreMedia.framework/CoreMedia";
     private static bool _frameworksLoaded;
 
@@ -293,6 +287,9 @@ internal static class MacObjectiveC
     private static extern void objc_msgSend_void_float(IntPtr receiver, IntPtr selector, float value);
 
     [DllImport(LibObjC, EntryPoint = "objc_msgSend")]
+    private static extern void objc_msgSend_void_nint(IntPtr receiver, IntPtr selector, nint value);
+
+    [DllImport(LibObjC, EntryPoint = "objc_msgSend")]
     private static extern void objc_msgSend_void_CMTime(IntPtr receiver, IntPtr selector, CMTime value);
 
     [DllImport(LibObjC, EntryPoint = "objc_msgSend")]
@@ -304,21 +301,14 @@ internal static class MacObjectiveC
     [DllImport(CoreMedia)]
     private static extern double CMTimeGetSeconds(CMTime time);
 
-    internal static IntPtr CreateLayerBackedView()
+    internal static IntPtr CreateAvPlayerView()
     {
         EnsureFrameworksLoaded();
-        var view = AllocInitWithCGRect("NSView", "initWithFrame:", default);
-        SendVoidBool(view, "setWantsLayer:", true);
-        return view;
-    }
-
-    internal static IntPtr CreateAvPlayerLayer()
-    {
-        EnsureFrameworksLoaded();
-        var layer = AllocInit("AVPlayerLayer");
+        var view = AllocInitWithCGRect("AVPlayerView", "initWithFrame:", default);
         var gravity = CreateNSString("AVLayerVideoGravityResizeAspect");
-        SendVoidIntPtr(layer, "setVideoGravity:", gravity);
-        return layer;
+        SendVoidIntPtr(view, "setVideoGravity:", gravity);
+        SendVoidNInt(view, "setControlsStyle:", 0);
+        return view;
     }
 
     internal static IntPtr CreateUrl(string source)
@@ -393,6 +383,14 @@ internal static class MacObjectiveC
         if (receiver != IntPtr.Zero)
         {
             objc_msgSend_void_float(receiver, GetSelector(selector), value);
+        }
+    }
+
+    internal static void SendVoidNInt(IntPtr receiver, string selector, nint value)
+    {
+        if (receiver != IntPtr.Zero)
+        {
+            objc_msgSend_void_nint(receiver, GetSelector(selector), value);
         }
     }
 
@@ -474,7 +472,7 @@ internal static class MacObjectiveC
         }
 
         NativeLibrary.Load(AvFoundation);
-        NativeLibrary.Load(QuartzCore);
+        NativeLibrary.Load(AvKit);
         NativeLibrary.Load(CoreMedia);
         _frameworksLoaded = true;
     }
