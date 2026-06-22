@@ -1078,7 +1078,7 @@ public sealed class BroadcastDvrService : IDisposable
         return string.Join(' ',
             "-map 0:v:0",
             "-an",
-            $"-vf fps={ToInvariant(MacFramePreviewFramesPerSecond)},scale=1280:-2",
+            $"-vf fps={ToInvariant(MacFramePreviewFramesPerSecond)},scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720",
             "-q:v 4",
             "-update 1",
             "-f image2",

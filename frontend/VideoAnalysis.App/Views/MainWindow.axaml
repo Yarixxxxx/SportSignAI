@@ -2881,7 +2881,7 @@
                 <Image x:Name="BroadcastPreviewImage"
                        HorizontalAlignment="Stretch"
                        VerticalAlignment="Stretch"
-                       Stretch="Uniform"
+                       Stretch="UniformToFill"
                        IsVisible="False"/>
               </Grid>
 
