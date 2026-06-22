@@ -350,24 +350,29 @@ public sealed class BroadcastDvrService : IDisposable
             var sourceParts = new List<string>(segments.Count);
             var remappedSegments = new List<ClipSegmentDto>(segments.Count);
             var cursorFrame = 0L;
-            var index = await WaitForRangeAsync(
-                    segments.Min(segment => Math.Max(0, segment.StartFrame)),
-                    segments.Max(segment => Math.Max(segment.StartFrame, segment.EndFrame)),
-                    cancellationToken)
-                .ConfigureAwait(false);
-            var availableStartFrame = index.Segments.Count == 0
-                ? 0
-                : index.Segments.Min(segment => segment.StartFrame);
-            var availableEndFrame = index.Segments.Count == 0
-                ? 0
-                : index.Segments.Max(segment => segment.EndFrame);
 
             for (var i = 0; i < segments.Count; i++)
             {
                 var segment = segments[i];
                 var requestedStartFrame = Math.Max(0, Math.Min(segment.StartFrame, segment.EndFrame));
                 var requestedEndFrame = Math.Max(requestedStartFrame, Math.Max(segment.StartFrame, segment.EndFrame));
-                var startFrame = Math.Max(requestedStartFrame, availableStartFrame);
+
+                BroadcastDvrIndex index;
+                long availableEndFrame;
+                try
+                {
+                    (index, availableEndFrame) = await WaitForAvailableRangeAsync(
+                            requestedStartFrame,
+                            requestedEndFrame,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                catch (InvalidOperationException)
+                {
+                    continue;
+                }
+
+                var startFrame = requestedStartFrame;
                 var endFrame = Math.Min(requestedEndFrame, availableEndFrame);
                 if (endFrame < startFrame)
                 {
