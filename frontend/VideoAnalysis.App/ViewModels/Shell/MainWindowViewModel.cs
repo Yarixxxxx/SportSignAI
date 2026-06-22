@@ -3641,6 +3641,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    public void AttachMacAvFoundationRenderer(MacAvFoundationVideoView renderer)
+    {
+        if (_mediaPlaybackService is MacAvFoundationMediaPlaybackService service)
+        {
+            service.AttachRenderer(renderer);
+        }
+    }
+
 #if WINDOWS_MPV
     public void AttachMpvContext(MpvContext mpvContext)
     {

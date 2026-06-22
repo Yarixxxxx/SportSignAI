@@ -30,6 +30,7 @@ public sealed class BroadcastDvrService : IDisposable
     private string? _projectFolderPath;
     private string? _sessionFolderPath;
     private string? _segmentFolderPath;
+    private string? _previewFolderPath;
     private string? _indexPath;
     private string? _previewSource;
     private DateTimeOffset _startedAtUtc;
@@ -73,6 +74,7 @@ public sealed class BroadcastDvrService : IDisposable
             _projectFolderPath = resolvedProjectFolderPath;
             _sessionFolderPath = sessionFolderPath;
             _segmentFolderPath = segmentFolderPath;
+            _previewFolderPath = Path.Combine(sessionFolderPath, "preview");
             _indexPath = Path.Combine(sessionFolderPath, "live-dvr-index.json");
             _startedAtUtc = ReadIndexStartedAtUtc(_indexPath)
                 ?? ParseSessionStartedAtUtc(sessionFolderPath)
@@ -130,6 +132,7 @@ public sealed class BroadcastDvrService : IDisposable
             var dvrRootPath = Path.Combine(resolvedProjectFolderPath, "media", "live-dvr");
             _sessionFolderPath = Path.Combine(dvrRootPath, $"session-{_startedAtUtc:yyyyMMdd-HHmmss}");
             _segmentFolderPath = Path.Combine(_sessionFolderPath, "segments");
+            _previewFolderPath = Path.Combine(_sessionFolderPath, "preview");
             _indexPath = Path.Combine(_sessionFolderPath, "live-dvr-index.json");
         }
 
@@ -139,9 +142,18 @@ public sealed class BroadcastDvrService : IDisposable
             ?? throw new InvalidOperationException("Live DVR index path was not initialized.");
 
         Directory.CreateDirectory(segmentFolderPath);
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            ResetPreviewFolder(_previewFolderPath ?? Path.Combine(_sessionFolderPath!, "preview"));
+        }
 
-        var previewPort = FindAvailableUdpPort();
-        _previewSource = BuildPreviewSource(previewPort);
+        var previewPort = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? 0 : FindAvailableUdpPort();
+        var previewPlaylistPath = RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+            ? Path.Combine(_previewFolderPath ?? Path.Combine(_sessionFolderPath!, "preview"), "live.m3u8")
+            : string.Empty;
+        _previewSource = RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+            ? new Uri(previewPlaylistPath).AbsoluteUri
+            : BuildPreviewSource(previewPort);
         var segmentPattern = Path.Combine(segmentFolderPath, "segment-%06d.ts");
         var segmentStartNumber = GetNextSegmentIndex(segmentFolderPath);
 
@@ -149,7 +161,7 @@ public sealed class BroadcastDvrService : IDisposable
         var startInfo = new ProcessStartInfo
         {
             FileName = ffmpegPath,
-            Arguments = BuildDvrArguments(resolvedCameraName, segmentPattern, segmentStartNumber, previewPort),
+            Arguments = BuildDvrArguments(resolvedCameraName, segmentPattern, segmentStartNumber, previewPort, previewPlaylistPath),
             CreateNoWindow = true,
             UseShellExecute = false,
             RedirectStandardInput = true,
@@ -167,6 +179,11 @@ public sealed class BroadcastDvrService : IDisposable
         {
             var details = await ReadProcessOutputAsync().ConfigureAwait(false);
             throw new InvalidOperationException($"ffmpeg live DVR exited immediately. FFmpeg: {ffmpegPath}. {details}");
+        }
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            await WaitForPreviewPlaylistAsync(previewPlaylistPath, cancellationToken).ConfigureAwait(false);
         }
 
         await SaveIndexAsync(cancellationToken).ConfigureAwait(false);
@@ -222,6 +239,7 @@ public sealed class BroadcastDvrService : IDisposable
         _projectFolderPath = null;
         _sessionFolderPath = null;
         _segmentFolderPath = null;
+        _previewFolderPath = null;
         _indexPath = null;
         _previewSource = null;
         _startedAtUtc = default;
@@ -968,7 +986,12 @@ public sealed class BroadcastDvrService : IDisposable
             .Max() + 1;
     }
 
-    private static string BuildDvrArguments(string cameraName, string segmentPattern, int segmentStartNumber, int previewPort)
+    private static string BuildDvrArguments(
+        string cameraName,
+        string segmentPattern,
+        int segmentStartNumber,
+        int previewPort,
+        string previewPlaylistPath)
     {
         var previewTarget = $"udp://127.0.0.1:{previewPort}?pkt_size=1316&buffer_size={PreviewUdpBufferBytes}";
         var segmentForceKeyFrames = $"expr:gte(t,n_forced*{SegmentSeconds})";
@@ -976,6 +999,9 @@ public sealed class BroadcastDvrService : IDisposable
         var segmentGop = (int)Math.Round(FallbackFramesPerSecond * SegmentSeconds);
         var previewGop = Math.Max(1, (int)Math.Round(FallbackFramesPerSecond * PreviewKeyFrameSeconds));
         var cameraInputArguments = BuildCameraInputArguments(cameraName);
+        var previewOutputArguments = RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+            ? BuildHlsPreviewOutputArguments(previewPlaylistPath)
+            : BuildUdpPreviewOutputArguments(previewTarget);
 
         return string.Join(' ',
             "-y",
@@ -1015,6 +1041,12 @@ public sealed class BroadcastDvrService : IDisposable
             $"-keyint_min {previewGop}",
             "-sc_threshold 0",
             $"-force_key_frames {Quote(previewForceKeyFrames)}",
+            previewOutputArguments);
+    }
+
+    private static string BuildUdpPreviewOutputArguments(string previewTarget)
+    {
+        return string.Join(' ',
             "-fflags nobuffer",
             "-muxdelay 0",
             "-muxpreload 0",
@@ -1022,6 +1054,22 @@ public sealed class BroadcastDvrService : IDisposable
             "-mpegts_flags +resend_headers",
             "-f mpegts",
             Quote(previewTarget));
+    }
+
+    private static string BuildHlsPreviewOutputArguments(string previewPlaylistPath)
+    {
+        var previewFolderPath = Path.GetDirectoryName(previewPlaylistPath)
+            ?? throw new InvalidOperationException("HLS preview folder could not be resolved.");
+        var previewSegmentPattern = Path.Combine(previewFolderPath, "preview-%06d.ts");
+
+        return string.Join(' ',
+            "-f hls",
+            $"-hls_time {ToInvariant(PreviewKeyFrameSeconds)}",
+            "-hls_list_size 6",
+            "-hls_segment_type mpegts",
+            "-hls_flags delete_segments+omit_endlist+program_date_time",
+            $"-hls_segment_filename {Quote(previewSegmentPattern)}",
+            Quote(previewPlaylistPath));
     }
 
     private static string BuildCameraInputArguments(string cameraName)
@@ -1052,6 +1100,31 @@ public sealed class BroadcastDvrService : IDisposable
     private static string BuildPreviewSource(int previewPort)
     {
         return $"udp://127.0.0.1:{previewPort}?fifo_size={PreviewUdpFifoPackets}&overrun_nonfatal=1&buffer_size={PreviewUdpBufferBytes}";
+    }
+
+    private static void ResetPreviewFolder(string previewFolderPath)
+    {
+        if (Directory.Exists(previewFolderPath))
+        {
+            try
+            {
+                Directory.Delete(previewFolderPath, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+
+        Directory.CreateDirectory(previewFolderPath);
+    }
+
+    private static async Task WaitForPreviewPlaylistAsync(string previewPlaylistPath, CancellationToken cancellationToken)
+    {
+        var timeoutAt = Environment.TickCount64 + 3_000;
+        while (!File.Exists(previewPlaylistPath) && Environment.TickCount64 < timeoutAt)
+        {
+            await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private async Task<string> ReadProcessOutputAsync()

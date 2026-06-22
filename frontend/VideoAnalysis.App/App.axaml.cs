@@ -127,7 +127,9 @@ public partial class App : Application
 #if WINDOWS_MPV
         services.AddSingleton<IMediaPlaybackService, MpvMediaPlaybackService>();
 #else
-        services.AddSingleton<IMediaPlaybackService, LibVlcMediaPlaybackService>();
+        services.AddSingleton<IMediaPlaybackService>(_ => OperatingSystem.IsMacOS()
+            ? new MacAvFoundationMediaPlaybackService()
+            : new LibVlcMediaPlaybackService());
 #endif
         services.AddSingleton<IVideoProxyService>(_ => new FfmpegVideoProxyService(settings.FfmpegPath));
         services.AddSingleton<IClipComposerService>(_ => new FfmpegClipComposerService(settings.FfmpegPath));

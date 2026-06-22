@@ -170,6 +170,7 @@ public partial class MainWindow : Window
     private MpvView? _playerView;
 #endif
     private VideoView? _playerLibVlcView;
+    private MacAvFoundationVideoView? _playerMacAvView;
     private Button? _playerDetachButton;
     private Border? _videoZoomDiagnosticsOverlay;
     private TextBlock? _videoZoomDiagnosticsText;
@@ -189,6 +190,7 @@ public partial class MainWindow : Window
     private MpvView? _broadcastView;
 #endif
     private VideoView? _broadcastLibVlcView;
+    private MacAvFoundationVideoView? _broadcastMacAvView;
     private readonly IMediaPlaybackService _broadcastPlaybackService;
     private bool _isSynchronizingMenus;
     private bool _isSeekDragging;
@@ -444,14 +446,20 @@ public partial class MainWindow : Window
         false;
 #endif
 
+    private static bool UseMacAvFoundationPlayback => OperatingSystem.IsMacOS();
+
     private static IMediaPlaybackService CreateBroadcastPlaybackService()
     {
 #if WINDOWS_MPV
         return UseMpvEmbeddedPlayback
             ? new MpvMediaPlaybackService()
-            : new LibVlcMediaPlaybackService();
+            : UseMacAvFoundationPlayback
+                ? new MacAvFoundationMediaPlaybackService()
+                : new LibVlcMediaPlaybackService();
 #else
-        return new LibVlcMediaPlaybackService();
+        return UseMacAvFoundationPlayback
+            ? new MacAvFoundationMediaPlaybackService()
+            : new LibVlcMediaPlaybackService();
 #endif
     }
 
@@ -474,6 +482,21 @@ public partial class MainWindow : Window
             return;
         }
 #endif
+
+        if (UseMacAvFoundationPlayback)
+        {
+            _playerMacAvView = CreateMacAvFoundationView();
+            PlayerVideoPresenter.Children.Insert(0, _playerMacAvView);
+
+            _broadcastMacAvView = CreateMacAvFoundationView();
+            BroadcastVideoPresenter.Children.Insert(0, _broadcastMacAvView);
+            if (_broadcastPlaybackService is MacAvFoundationMediaPlaybackService broadcastPlaybackService)
+            {
+                broadcastPlaybackService.AttachRenderer(_broadcastMacAvView);
+            }
+
+            return;
+        }
 
         _playerLibVlcView = CreateLibVlcView();
         PlayerVideoPresenter.Children.Insert(0, _playerLibVlcView);
@@ -512,8 +535,28 @@ public partial class MainWindow : Window
         };
     }
 
+    private static MacAvFoundationVideoView CreateMacAvFoundationView()
+    {
+        return new MacAvFoundationVideoView
+        {
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch
+        };
+    }
+
     private void BindManagedVideoViews()
     {
+        if (_playerMacAvView is not null)
+        {
+            _viewModel?.AttachMacAvFoundationRenderer(_playerMacAvView);
+        }
+
+        if (_broadcastMacAvView is not null
+            && _broadcastPlaybackService is MacAvFoundationMediaPlaybackService broadcastPlaybackService)
+        {
+            broadcastPlaybackService.AttachRenderer(_broadcastMacAvView);
+        }
+
         if (_playerLibVlcView is not null)
         {
             _playerLibVlcView.MediaPlayer = _viewModel?.MediaPlayer;
@@ -600,6 +643,11 @@ public partial class MainWindow : Window
         if (_playerLibVlcView is not null)
         {
             _playerLibVlcView.IsVisible = isVisible;
+        }
+
+        if (_playerMacAvView is not null)
+        {
+            _playerMacAvView.IsVisible = isVisible;
         }
 
         if (!isVisible)
@@ -888,6 +936,9 @@ public partial class MainWindow : Window
                 await mpvPlaybackService.OpenLiveStreamAsync(source, metadataPath, cancellationToken);
                 break;
 #endif
+            case MacAvFoundationMediaPlaybackService macPlaybackService:
+                await macPlaybackService.OpenLiveStreamAsync(source, metadataPath, cancellationToken);
+                break;
             case LibVlcMediaPlaybackService libVlcPlaybackService:
                 await libVlcPlaybackService.OpenLiveStreamAsync(source, metadataPath, cancellationToken);
                 BindManagedVideoViews();
@@ -899,6 +950,12 @@ public partial class MainWindow : Window
 
     private bool DropBroadcastLiveBuffers()
     {
+        if (_broadcastPlaybackService is MacAvFoundationMediaPlaybackService macPlaybackService)
+        {
+            macPlaybackService.SyncLiveEdge();
+            return true;
+        }
+
 #if WINDOWS_MPV
         return _broadcastPlaybackService is MpvMediaPlaybackService mpvPlaybackService
             && mpvPlaybackService.DropLiveBuffers();
