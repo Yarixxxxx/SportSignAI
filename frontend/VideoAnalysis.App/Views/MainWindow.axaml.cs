@@ -6,6 +6,7 @@ using Avalonia.Interactivity;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -87,6 +88,8 @@ public partial class MainWindow : Window
         ?? throw new InvalidOperationException("BroadcastSurfaceHost was not found.");
     private Grid BroadcastVideoPresenter => _broadcastVideoPresenter ??= this.FindControl<Grid>(nameof(BroadcastVideoPresenter))
         ?? throw new InvalidOperationException("BroadcastVideoPresenter was not found.");
+    private Image BroadcastPreviewImage => _broadcastPreviewImage ??= this.FindControl<Image>(nameof(BroadcastPreviewImage))
+        ?? throw new InvalidOperationException("BroadcastPreviewImage was not found.");
     private TextBlock BroadcastStatusText => this.FindControl<TextBlock>(nameof(BroadcastStatusText))
         ?? throw new InvalidOperationException("BroadcastStatusText was not found.");
     private Border TimelinePanel => this.FindControl<Border>(nameof(TimelinePanel))
@@ -186,11 +189,11 @@ public partial class MainWindow : Window
     private Ellipse? _timelineZoomSliderThumb;
     private Border? _volumePopupRoot;
     private Grid? _broadcastVideoPresenter;
+    private Image? _broadcastPreviewImage;
 #if WINDOWS_MPV
     private MpvView? _broadcastView;
 #endif
     private VideoView? _broadcastLibVlcView;
-    private MacAvFoundationVideoView? _broadcastMacAvView;
     private readonly IMediaPlaybackService _broadcastPlaybackService;
     private bool _isSynchronizingMenus;
     private bool _isSeekDragging;
@@ -215,6 +218,11 @@ public partial class MainWindow : Window
     private long _broadcastLiveHealthTimestamp;
     private double _broadcastLiveLagSeconds;
     private readonly DispatcherTimer _broadcastLiveEdgeTimer;
+    private readonly DispatcherTimer _broadcastFramePreviewTimer;
+    private string? _broadcastFramePreviewPath;
+    private DateTime _broadcastFramePreviewLastWriteUtc;
+    private Bitmap? _broadcastFramePreviewBitmap;
+    private bool _isBroadcastFramePreviewLoading;
     private bool _isTimelinePanDragging;
     private bool _isTimelineSeekDragging;
     private bool _hasTimelineSeekMoved;
@@ -399,6 +407,11 @@ public partial class MainWindow : Window
         };
         _broadcastLiveEdgeTimer.Tick += OnBroadcastLiveEdgeTimerTick;
         _broadcastLiveEdgeTimer.Start();
+        _broadcastFramePreviewTimer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromMilliseconds(85)
+        };
+        _broadcastFramePreviewTimer.Tick += OnBroadcastFramePreviewTimerTick;
         DataContextChanged += OnDataContextChanged;
         LayoutUpdated += OnLayoutUpdated;
         Opened += OnOpened;
@@ -447,6 +460,7 @@ public partial class MainWindow : Window
 #endif
 
     private static bool UseMacAvFoundationPlayback => OperatingSystem.IsMacOS();
+    private static bool UseMacBroadcastFramePreview => OperatingSystem.IsMacOS();
 
     private static IMediaPlaybackService CreateBroadcastPlaybackService()
     {
@@ -488,12 +502,7 @@ public partial class MainWindow : Window
             _playerMacAvView = CreateMacAvFoundationView();
             PlayerVideoPresenter.Children.Insert(0, _playerMacAvView);
 
-            _broadcastMacAvView = CreateMacAvFoundationView();
-            BroadcastVideoPresenter.Children.Insert(0, _broadcastMacAvView);
-            if (_broadcastPlaybackService is MacAvFoundationMediaPlaybackService broadcastPlaybackService)
-            {
-                broadcastPlaybackService.AttachRenderer(_broadcastMacAvView);
-            }
+            BroadcastPreviewImage.IsVisible = true;
 
             return;
         }
@@ -549,12 +558,6 @@ public partial class MainWindow : Window
         if (_playerMacAvView is not null)
         {
             _viewModel?.AttachMacAvFoundationRenderer(_playerMacAvView);
-        }
-
-        if (_broadcastMacAvView is not null
-            && _broadcastPlaybackService is MacAvFoundationMediaPlaybackService broadcastPlaybackService)
-        {
-            broadcastPlaybackService.AttachRenderer(_broadcastMacAvView);
         }
 
         if (_playerLibVlcView is not null)
@@ -929,6 +932,13 @@ public partial class MainWindow : Window
 
     private async Task OpenBroadcastLiveStreamAsync(string source, string metadataPath, CancellationToken cancellationToken)
     {
+        if (UseMacBroadcastFramePreview)
+        {
+            StartBroadcastFramePreview(source);
+            await Task.CompletedTask;
+            return;
+        }
+
         switch (_broadcastPlaybackService)
         {
 #if WINDOWS_MPV
@@ -983,7 +993,11 @@ public partial class MainWindow : Window
                 previewSource,
                 "dvr://broadcast",
                 CancellationToken.None);
-            _broadcastPlaybackService.Play();
+            if (!UseMacBroadcastFramePreview)
+            {
+                _broadcastPlaybackService.Play();
+            }
+
             _isBroadcastLiveStarted = true;
             ResetBroadcastLiveEdgeTracking();
             BroadcastStatusText.Text = "LIVE DVR";
@@ -1049,6 +1063,11 @@ public partial class MainWindow : Window
 
     private bool ShouldRefreshBroadcastLivePreview()
     {
+        if (UseMacBroadcastFramePreview)
+        {
+            return false;
+        }
+
         if (!_broadcastPlaybackService.IsPlaying)
         {
             return true;
@@ -1083,6 +1102,11 @@ public partial class MainWindow : Window
 
     private void OnBroadcastLiveEdgeTimerTick(object? sender, EventArgs e)
     {
+        if (UseMacBroadcastFramePreview)
+        {
+            return;
+        }
+
         if (_viewModel?.IsBroadcastDvrRunning != true
             || !_isBroadcastLiveStarted
             || _isBroadcastManuallyStopped
@@ -1133,6 +1157,15 @@ public partial class MainWindow : Window
         var previewSource = _viewModel.BroadcastDvrPreviewSource;
         try
         {
+            if (UseMacBroadcastFramePreview)
+            {
+                StartBroadcastFramePreview(previewSource);
+                _isBroadcastLiveStarted = true;
+                ResetBroadcastLiveEdgeTracking();
+                BroadcastStatusText.Text = "LIVE DVR";
+                return;
+            }
+
             if (DropBroadcastLiveBuffers())
             {
                 _broadcastPlaybackService.Play();
@@ -1165,6 +1198,105 @@ public partial class MainWindow : Window
         }
     }
 
+    private void StartBroadcastFramePreview(string previewSource)
+    {
+        var framePath = ResolveBroadcastPreviewFramePath(previewSource);
+        if (string.IsNullOrWhiteSpace(framePath))
+        {
+            BroadcastStatusText.Text = "LIVE preview недоступен";
+            return;
+        }
+
+        _broadcastFramePreviewPath = framePath;
+        _broadcastFramePreviewLastWriteUtc = default;
+        BroadcastPreviewImage.IsVisible = true;
+        _broadcastFramePreviewTimer.Start();
+        LoadBroadcastPreviewFrame(force: true);
+    }
+
+    private void StopBroadcastFramePreview()
+    {
+        _broadcastFramePreviewTimer.Stop();
+        _broadcastFramePreviewPath = null;
+        _broadcastFramePreviewLastWriteUtc = default;
+        BroadcastPreviewImage.Source = null;
+        BroadcastPreviewImage.IsVisible = UseMacBroadcastFramePreview;
+        _broadcastFramePreviewBitmap?.Dispose();
+        _broadcastFramePreviewBitmap = null;
+    }
+
+    private void OnBroadcastFramePreviewTimerTick(object? sender, EventArgs e)
+    {
+        LoadBroadcastPreviewFrame(force: false);
+    }
+
+    private void LoadBroadcastPreviewFrame(bool force)
+    {
+        if (!UseMacBroadcastFramePreview
+            || _isBroadcastFramePreviewLoading
+            || string.IsNullOrWhiteSpace(_broadcastFramePreviewPath))
+        {
+            return;
+        }
+
+        try
+        {
+            var fileInfo = new FileInfo(_broadcastFramePreviewPath);
+            if (!fileInfo.Exists || fileInfo.Length < 256)
+            {
+                return;
+            }
+
+            if (!force && fileInfo.LastWriteTimeUtc <= _broadcastFramePreviewLastWriteUtc)
+            {
+                return;
+            }
+
+            _isBroadcastFramePreviewLoading = true;
+            using var stream = new FileStream(
+                fileInfo.FullName,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete);
+            var nextBitmap = new Bitmap(stream);
+            var previousBitmap = _broadcastFramePreviewBitmap;
+            _broadcastFramePreviewBitmap = nextBitmap;
+            BroadcastPreviewImage.Source = nextBitmap;
+            _broadcastFramePreviewLastWriteUtc = fileInfo.LastWriteTimeUtc;
+            previousBitmap?.Dispose();
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+        catch (ArgumentException)
+        {
+        }
+        finally
+        {
+            _isBroadcastFramePreviewLoading = false;
+        }
+    }
+
+    private string ResolveBroadcastPreviewFramePath(string previewSource)
+    {
+        if (!string.IsNullOrWhiteSpace(_viewModel?.BroadcastDvrPreviewFramePath))
+        {
+            return _viewModel.BroadcastDvrPreviewFramePath;
+        }
+
+        if (Uri.TryCreate(previewSource, UriKind.Absolute, out var uri)
+            && string.Equals(uri.Scheme, Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase))
+        {
+            var directory = System.IO.Path.GetDirectoryName(uri.LocalPath);
+            return string.IsNullOrWhiteSpace(directory) ? string.Empty : System.IO.Path.Combine(directory, "preview.jpg");
+        }
+
+        return string.Empty;
+    }
+
     private void StopBroadcastLive(bool stopTimeline = true)
     {
         if (!_isBroadcastLiveStarted)
@@ -1172,7 +1304,14 @@ public partial class MainWindow : Window
             return;
         }
 
-        _broadcastPlaybackService.Close();
+        if (UseMacBroadcastFramePreview)
+        {
+            StopBroadcastFramePreview();
+        }
+        else
+        {
+            _broadcastPlaybackService.Close();
+        }
         _isBroadcastLiveStarted = false;
         ClearBroadcastLiveEdgeTracking();
         BroadcastStatusText.Text = "Ожидание камеры";
@@ -1180,7 +1319,14 @@ public partial class MainWindow : Window
 
     private async Task StopBroadcastLiveAsync(bool stopDvr, bool manualStop)
     {
-        _broadcastPlaybackService.Close();
+        if (UseMacBroadcastFramePreview)
+        {
+            StopBroadcastFramePreview();
+        }
+        else
+        {
+            _broadcastPlaybackService.Close();
+        }
         _isBroadcastLiveStarted = false;
         ClearBroadcastLiveEdgeTracking();
 
@@ -1282,6 +1428,7 @@ public partial class MainWindow : Window
     private void OnClosed(object? sender, EventArgs e)
     {
         _broadcastLiveEdgeTimer.Stop();
+        StopBroadcastFramePreview();
         DockPlayerToMainWindow();
         _viewModel?.ShutdownBroadcastRecording();
         _playerContextSubscription?.Dispose();

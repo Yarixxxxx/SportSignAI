@@ -382,6 +382,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private bool _isBroadcastRecordingOperationInProgress;
     [ObservableProperty] private string _broadcastRecordingPreviewSource = string.Empty;
     [ObservableProperty] private string _broadcastDvrPreviewSource = string.Empty;
+    [ObservableProperty] private string _broadcastDvrPreviewFramePath = string.Empty;
     [ObservableProperty] private bool _isBroadcastDvrRunning;
     [ObservableProperty] private bool _isPresetEditorOpen;
     [ObservableProperty] private bool _isEditingPreset;
@@ -1005,6 +1006,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         var session = await _broadcastDvrService.StartAsync(_projectFolderPath, cameraName: null, cancellationToken);
 
         BroadcastDvrPreviewSource = session.PreviewSource;
+        BroadcastDvrPreviewFramePath = session.PreviewFramePath;
         IsBroadcastDvrRunning = true;
         FramesPerSecond = session.FramesPerSecond;
         StartBroadcastTimeline(session.StartedAtUtc);
@@ -1016,6 +1018,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     {
         await _broadcastDvrService.StopAsync(cancellationToken);
         BroadcastDvrPreviewSource = string.Empty;
+        BroadcastDvrPreviewFramePath = string.Empty;
         IsBroadcastDvrRunning = false;
         IsBroadcastRecording = false;
         BroadcastRecordingPreviewSource = string.Empty;
@@ -2685,6 +2688,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         IsBroadcastRecording = false;
         BroadcastRecordingPreviewSource = string.Empty;
         BroadcastDvrPreviewSource = string.Empty;
+        BroadcastDvrPreviewFramePath = string.Empty;
         IsBroadcastDvrRunning = false;
         BroadcastTimelineFrame = 0;
         CurrentFrame = 0;
@@ -2734,6 +2738,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         IsBroadcastRecordingOperationInProgress = false;
         BroadcastRecordingPreviewSource = string.Empty;
         BroadcastDvrPreviewSource = string.Empty;
+        BroadcastDvrPreviewFramePath = string.Empty;
         IsBroadcastDvrRunning = false;
         BroadcastTimelineFrame = 0;
         IsLiveSource = false;
@@ -3677,6 +3682,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         IsBroadcastRecordingOperationInProgress = false;
         BroadcastRecordingPreviewSource = string.Empty;
         BroadcastDvrPreviewSource = string.Empty;
+        BroadcastDvrPreviewFramePath = string.Empty;
         IsBroadcastDvrRunning = false;
         _broadcastDvrService.ShutdownFast();
     }

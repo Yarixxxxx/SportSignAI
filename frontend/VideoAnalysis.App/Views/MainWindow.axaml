@@ -2877,7 +2877,13 @@
             <Grid>
               <Grid x:Name="BroadcastVideoPresenter"
                     HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"/>
+                    VerticalAlignment="Stretch">
+                <Image x:Name="BroadcastPreviewImage"
+                       HorizontalAlignment="Stretch"
+                       VerticalAlignment="Stretch"
+                       Stretch="Uniform"
+                       IsVisible="False"/>
+              </Grid>
 
               <Border HorizontalAlignment="Left"
                       VerticalAlignment="Top"
