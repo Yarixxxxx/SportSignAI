@@ -63,6 +63,7 @@ public sealed class FfmpegClipComposerService : IClipComposerService
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? AppContext.BaseDirectory);
         var tempRoot = Path.Combine(Path.GetTempPath(), "video-analysis", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempRoot);
+        var ffmpegExecutablePath = FfmpegExecutableResolver.Resolve(_ffmpegPath);
 
         try
         {
@@ -89,18 +90,19 @@ public sealed class FfmpegClipComposerService : IClipComposerService
                     "-avoid_negative_ts make_zero",
                     Quote(partPath));
 
-                await RunFfmpegAsync(args, cancellationToken);
+                await RunFfmpegAsync(ffmpegExecutablePath, args, cancellationToken);
             }
 
             var listPath = Path.Combine(tempRoot, "concat.txt");
             await File.WriteAllTextAsync(listPath, string.Join(Environment.NewLine, segmentFiles.Select((path) => $"file '{path.Replace("'", "''")}'")), cancellationToken);
             var mergedPath = string.IsNullOrWhiteSpace(overlayFilterPath) ? outputPath : Path.Combine(tempRoot, "merged.mp4");
 
-            await RunFfmpegAsync($"-y -f concat -safe 0 -i {Quote(listPath)} -c copy {Quote(mergedPath)}", cancellationToken);
+            await RunFfmpegAsync(ffmpegExecutablePath, $"-y -f concat -safe 0 -i {Quote(listPath)} -c copy {Quote(mergedPath)}", cancellationToken);
 
             if (!string.IsNullOrWhiteSpace(overlayFilterPath))
             {
                 await RunFfmpegAsync(
+                    ffmpegExecutablePath,
                     $"-y -i {Quote(mergedPath)} -filter_script:v {Quote(overlayFilterPath!)} -c:v libx264 -preset {ExportVideoPreset} -crf {ExportVideoCrf} -pix_fmt yuv420p -c:a copy -movflags +faststart {Quote(outputPath)}",
                     cancellationToken);
             }
@@ -113,9 +115,8 @@ public sealed class FfmpegClipComposerService : IClipComposerService
         }
     }
 
-    private async Task RunFfmpegAsync(string arguments, CancellationToken cancellationToken)
+    private static async Task RunFfmpegAsync(string ffmpegExecutablePath, string arguments, CancellationToken cancellationToken)
     {
-        var ffmpegExecutablePath = ResolveFfmpegExecutablePath();
         var processStartInfo = new ProcessStartInfo
         {
             FileName = ffmpegExecutablePath,
