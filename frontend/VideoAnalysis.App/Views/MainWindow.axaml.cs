@@ -635,31 +635,45 @@ public partial class MainWindow : Window
 
         QueuePlayerRendererInitialization();
 
-        var isVisible = !_isPlayerPanelHidden;
-        PlayerSurfaceHost.IsVisible = isVisible;
+        var isPanelVisible = !_isPlayerPanelHidden;
+        var isNativeSurfaceVisible = isPanelVisible && !ShouldHideNativePlayerSurfaceForOverlay();
+        PlayerSurfaceHost.IsVisible = isPanelVisible;
 #if WINDOWS_MPV
         if (_playerView is not null)
         {
-            _playerView.IsVisible = isVisible;
+            _playerView.IsVisible = isNativeSurfaceVisible;
         }
 #endif
 
         if (_playerLibVlcView is not null)
         {
-            _playerLibVlcView.IsVisible = isVisible;
+            _playerLibVlcView.IsVisible = isNativeSurfaceVisible;
         }
 
         if (_playerMacAvView is not null)
         {
-            _playerMacAvView.IsVisible = isVisible;
+            _playerMacAvView.IsVisible = isNativeSurfaceVisible;
         }
 
-        if (!isVisible)
+        if (!isNativeSurfaceVisible)
         {
             return;
         }
 
         UpdateVideoZoomLayout();
+    }
+
+    private bool ShouldHideNativePlayerSurfaceForOverlay()
+    {
+        return OperatingSystem.IsMacOS()
+            && _viewModel is not null
+            && (_viewModel.IsNewProjectDialogOpen
+                || _viewModel.IsExportDialogOpen
+                || _viewModel.IsStartupScreenVisible
+                || _viewModel.IsProjectPickerOpen
+                || _viewModel.IsPresetEditorOpen
+                || _viewModel.IsTagEventEditorOpen
+                || _viewModel.IsAddToPlaylistDialogOpen);
     }
 
 #if WINDOWS_MPV
@@ -3710,7 +3724,11 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (e.PropertyName is nameof(MainWindowViewModel.IsNewProjectDialogOpen) or nameof(MainWindowViewModel.IsStartupScreenOpen) or nameof(MainWindowViewModel.IsExportDialogOpen))
+        if (e.PropertyName is nameof(MainWindowViewModel.IsNewProjectDialogOpen)
+            or nameof(MainWindowViewModel.IsStartupScreenOpen)
+            or nameof(MainWindowViewModel.IsExportDialogOpen)
+            or nameof(MainWindowViewModel.IsProjectPickerOpen)
+            or nameof(MainWindowViewModel.IsAddToPlaylistDialogOpen))
         {
             UpdateVideoSurfaceVisibility();
             if (_viewModel?.IsNewProjectDialogOpen == true)
@@ -3729,15 +3747,25 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (e.PropertyName == nameof(MainWindowViewModel.IsPresetEditorOpen) && _viewModel?.IsPresetEditorOpen == true)
+        if (e.PropertyName == nameof(MainWindowViewModel.IsPresetEditorOpen))
         {
-            Dispatcher.UIThread.Post(() => PresetEditorCloseButton.Focus());
+            UpdateVideoSurfaceVisibility();
+            if (_viewModel?.IsPresetEditorOpen == true)
+            {
+                Dispatcher.UIThread.Post(() => PresetEditorCloseButton.Focus());
+            }
+
             return;
         }
 
-        if (e.PropertyName == nameof(MainWindowViewModel.IsTagEventEditorOpen) && _viewModel?.IsTagEventEditorOpen == true)
+        if (e.PropertyName == nameof(MainWindowViewModel.IsTagEventEditorOpen))
         {
-            Dispatcher.UIThread.Post(() => TagEventEditorCloseButton.Focus());
+            UpdateVideoSurfaceVisibility();
+            if (_viewModel?.IsTagEventEditorOpen == true)
+            {
+                Dispatcher.UIThread.Post(() => TagEventEditorCloseButton.Focus());
+            }
+
             return;
         }
 

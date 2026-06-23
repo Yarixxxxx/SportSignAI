@@ -286,6 +286,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         && !string.IsNullOrWhiteSpace(ExportFolderPath)
         && !IsExportInProgress;
     public bool CanCloseExportDialog => !IsExportInProgress;
+    public bool HasExportErrorMessage => !string.IsNullOrWhiteSpace(ExportErrorMessage);
 
     public void SetVideoViewportSize(double width, double height)
     {
@@ -429,6 +430,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private bool _exportIncludeTacticalDrawings;
     [ObservableProperty] private bool _isExportInProgress;
     [ObservableProperty] private string _exportProgressText = "Подготовка к экспорту...";
+    [ObservableProperty] private string _exportErrorMessage = string.Empty;
     [ObservableProperty] private ExportSourceOption _selectedExportSource = ExportSourceOption.AllClips;
     [ObservableProperty] private ExportFormatOption _selectedExportFormat = ExportFormatOption.Mp4;
     [ObservableProperty] private ExportQualityOption _selectedExportQuality = ExportQualityOption.High4K;
@@ -845,6 +847,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanExportFromDialog));
         OnPropertyChanged(nameof(CanCloseExportDialog));
         OnPropertyChanged(nameof(ExportPrimaryButtonText));
+    }
+
+    partial void OnExportErrorMessageChanged(string value)
+    {
+        OnPropertyChanged(nameof(HasExportErrorMessage));
     }
 
     [RelayCommand]
@@ -2480,37 +2487,39 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
         if (_projectId == Guid.Empty)
         {
-            StatusMessage = "Сначала откройте проект.";
+            SetExportError("Сначала откройте проект.");
             return;
         }
 
         if (!HasReadableSourceVideo() && !CanUseBroadcastDvrAsSource())
         {
-            StatusMessage = "Исходное видео не найдено.";
+            SetExportError("Исходное видео не найдено.");
             return;
         }
 
         if (SelectedExportDestination == ExportDestinationOption.Telegram)
         {
-            StatusMessage = "Экспорт в Telegram пока не реализован. Пока доступно сохранение в папку.";
+            SetExportError("Экспорт в Telegram пока не реализован. Пока доступно сохранение в папку.");
             return;
         }
 
         IReadOnlyList<ClipSegmentDto> segments;
         try
         {
+            ExportErrorMessage = string.Empty;
             segments = await ResolveExportSegmentsAsync();
         }
         catch (InvalidOperationException ex)
         {
             AppLogService.Warning(ex, "Resolve export segments failed");
-            StatusMessage = ex.Message;
+            SetExportError(ex.Message);
             return;
         }
 
         try
         {
             IsExportInProgress = true;
+            ExportErrorMessage = string.Empty;
             ExportProgressText = "Подготавливаем экспорт...";
             StatusMessage = "Подготавливаем экспорт...";
             await Task.Yield();
@@ -2552,7 +2561,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             var result = await _exportService.ExportAsync(request, CancellationToken.None);
             if (!result.Success)
             {
-                StatusMessage = $"Export error: {result.ErrorMessage}";
+                var errorMessage = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                    ? "Неизвестная ошибка экспорта."
+                    : result.ErrorMessage;
+                AppLogService.Error(errorMessage, "Export from dialog failed");
+                SetExportError($"Не удалось выполнить экспорт: {ShortenForUi(errorMessage)}");
                 return;
             }
 
@@ -2579,7 +2592,12 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         catch (InvalidOperationException ex)
         {
             AppLogService.Warning(ex, "Export from dialog failed");
-            StatusMessage = ex.Message;
+            SetExportError(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            AppLogService.Error(ex, "Export from dialog failed unexpectedly");
+            SetExportError($"Не удалось выполнить экспорт: {ShortenForUi(ex.Message)}");
         }
         finally
         {
@@ -3362,6 +3380,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         SelectedExportSource = defaultSource == ExportSourceOption.Playlist && _activePlaylistSegments.Count == 0
             ? ExportSourceOption.AllClips
             : defaultSource;
+        ExportErrorMessage = string.Empty;
         ExportFolderPath = GetResolvedExportFolderPath();
         UpdateExportOutputPath();
         IsExportDialogOpen = true;
@@ -3581,6 +3600,25 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             ExportFormatOption.Mov => ".mov",
             _ => ".mp4"
         };
+    }
+
+    private void SetExportError(string message)
+    {
+        var safeMessage = string.IsNullOrWhiteSpace(message)
+            ? "Не удалось выполнить экспорт."
+            : message.Trim();
+        ExportErrorMessage = safeMessage;
+        StatusMessage = safeMessage;
+    }
+
+    private static string ShortenForUi(string message, int maxLength = 360)
+    {
+        var safeMessage = string.IsNullOrWhiteSpace(message)
+            ? "Неизвестная ошибка."
+            : message.Trim();
+        return safeMessage.Length <= maxLength
+            ? safeMessage
+            : $"{safeMessage[..maxLength]}...";
     }
 
     private void StartPlaylistSegment(int index)

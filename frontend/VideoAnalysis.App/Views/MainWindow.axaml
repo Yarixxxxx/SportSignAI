@@ -4054,34 +4054,47 @@
                     BorderBrush="#364153"
                     BorderThickness="0,1,0,0"
                     Padding="16">
-              <Grid ColumnDefinitions="*,*"
-                    ColumnSpacing="12">
-                <Button Grid.Column="0"
-                        Classes="export-footer-secondary"
-                        Command="{Binding CloseExportDialogCommand}"
-                        IsEnabled="{Binding CanCloseExportDialog}"
-                        Content="Отмена"/>
-                <Button Grid.Column="1"
-                        Classes="export-footer-primary"
-                        Command="{Binding ExportFromDialogCommand}"
-                        IsEnabled="{Binding CanExportFromDialog}">
-                  <StackPanel Orientation="Horizontal"
-                              HorizontalAlignment="Center"
-                              Spacing="8">
-                    <Path Data="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M17 8l-5-5-5 5 M12 3v12"
-                          Stroke="White"
-                          StrokeThickness="1.33"
-                          StrokeLineCap="Round"
-                          StrokeJoin="Round"
-                          Fill="Transparent"
-                          Width="16"
-                          Height="16"
-                          Stretch="Uniform"
-                          VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding ExportPrimaryButtonText}"/>
-                  </StackPanel>
-                </Button>
-              </Grid>
+              <StackPanel Spacing="12">
+                <Border Background="#3A1620"
+                        BorderBrush="#EF4444"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="12,10"
+                        IsVisible="{Binding HasExportErrorMessage}">
+                  <TextBlock Text="{Binding ExportErrorMessage}"
+                             Foreground="#FCA5A5"
+                             TextWrapping="Wrap"/>
+                </Border>
+
+                <Grid ColumnDefinitions="*,*"
+                      ColumnSpacing="12">
+                  <Button Grid.Column="0"
+                          Classes="export-footer-secondary"
+                          Command="{Binding CloseExportDialogCommand}"
+                          IsEnabled="{Binding CanCloseExportDialog}"
+                          Content="Отмена"/>
+                  <Button Grid.Column="1"
+                          Classes="export-footer-primary"
+                          Command="{Binding ExportFromDialogCommand}"
+                          IsEnabled="{Binding CanExportFromDialog}">
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                Spacing="8">
+                      <Path Data="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M17 8l-5-5-5 5 M12 3v12"
+                            Stroke="White"
+                            StrokeThickness="1.33"
+                            StrokeLineCap="Round"
+                            StrokeJoin="Round"
+                            Fill="Transparent"
+                            Width="16"
+                            Height="16"
+                            Stretch="Uniform"
+                            VerticalAlignment="Center"/>
+                      <TextBlock Text="{Binding ExportPrimaryButtonText}"/>
+                    </StackPanel>
+                  </Button>
+                </Grid>
+              </StackPanel>
             </Border>
 
             <Border Grid.RowSpan="3"

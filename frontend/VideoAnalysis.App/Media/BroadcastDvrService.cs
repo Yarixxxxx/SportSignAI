@@ -12,7 +12,7 @@ namespace VideoAnalysis.App.Media;
 public sealed class BroadcastDvrService : IDisposable
 {
     private const int SegmentSeconds = 1;
-    private const int RangeAvailabilityWaitSeconds = SegmentSeconds + 3;
+    private const int RangeAvailabilityWaitSeconds = 8;
     private const double PreviewKeyFrameSeconds = 0.5d;
     private const int PreviewUdpFifoPackets = 16384;
     private const int PreviewUdpBufferBytes = 1048576;
@@ -350,6 +350,8 @@ public sealed class BroadcastDvrService : IDisposable
             var sourceParts = new List<string>(segments.Count);
             var remappedSegments = new List<ClipSegmentDto>(segments.Count);
             var cursorFrame = 0L;
+            var skippedSegments = 0;
+            var truncatedSegments = 0;
 
             for (var i = 0; i < segments.Count; i++)
             {
@@ -367,8 +369,12 @@ public sealed class BroadcastDvrService : IDisposable
                             cancellationToken)
                         .ConfigureAwait(false);
                 }
-                catch (InvalidOperationException)
+                catch (InvalidOperationException ex)
                 {
+                    skippedSegments++;
+                    AppLogService.Warning(
+                        ex,
+                        $"Live-DVR export skipped segment {i + 1}/{segments.Count} [{requestedStartFrame}-{requestedEndFrame}]");
                     continue;
                 }
 
@@ -376,7 +382,19 @@ public sealed class BroadcastDvrService : IDisposable
                 var endFrame = Math.Min(requestedEndFrame, availableEndFrame);
                 if (endFrame < startFrame)
                 {
+                    skippedSegments++;
+                    AppLogService.Warning(
+                        $"Live-DVR export skipped empty segment {i + 1}/{segments.Count} [{requestedStartFrame}-{requestedEndFrame}], available end {availableEndFrame}.",
+                        "BroadcastDvr");
                     continue;
+                }
+
+                if (endFrame < requestedEndFrame)
+                {
+                    truncatedSegments++;
+                    AppLogService.Warning(
+                        $"Live-DVR export truncated segment {i + 1}/{segments.Count}: requested end {requestedEndFrame}, available end {availableEndFrame}.",
+                        "BroadcastDvr");
                 }
 
                 var partPath = Path.Combine(tempRoot, $"clip_{i:D4}.mp4");
@@ -403,11 +421,14 @@ public sealed class BroadcastDvrService : IDisposable
 
             if (sourceParts.Count == 0)
             {
-                throw new InvalidOperationException("Для выбранных моментов еще нет доступных live-DVR кадров.");
+                throw new InvalidOperationException("Для выбранных моментов еще нет доступных live-DVR кадров. Подождите несколько секунд и повторите экспорт.");
             }
 
             var sourcePath = Path.Combine(outputFolderPath, $"live-dvr-export-source-{DateTimeOffset.Now:yyyyMMdd-HHmmss}.mp4");
             await ConcatFilesAsync(sourceParts, sourcePath, tempRoot, cancellationToken).ConfigureAwait(false);
+            AppLogService.Info(
+                $"Live-DVR export prepared {sourceParts.Count}/{segments.Count} segments. Skipped: {skippedSegments}; truncated: {truncatedSegments}. Source: {sourcePath}",
+                "BroadcastDvr");
             return new BroadcastDvrPreparedExport(sourcePath, remappedSegments);
         }
         finally
